@@ -1,11 +1,7 @@
-//#include<ap_cint.h>
 #include <ap_fixed.h>
 #include <ap_int.h> //only in C++
 
 #include<math.h>
-//#include "ap_cint.h"
-
-//typedef ap_fixed<16,11> fixed16;
 #define MBD 4 // number of boards
 //conv1 parameter
 #define C1_OCH 20
@@ -19,9 +15,7 @@
 #define CONV1_OUT_SIZE C1_OCH*C1_ICH*C1_OSIZE*C1_OSIZE
 #define CONV1_BUF_SIZE (C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE+3)//means CONV1_OUT_SIZE/CONV1_OUTLOOP*CONV1_LOOPEXE   +3 ceiling for pkt
 #define CONV1_PKT_SIZE (CONV1_BUF_SIZE/4) //send packetnum
-
-/////////////
-
+///////////////
 #define P1_OSIZE 12
 #define P1_K 2
 
@@ -43,12 +37,9 @@
 #define F2_M 500
 #define F2_P 10
 
-//#define RESULTSIZE 12 // mistake?
 #define RESULTSIZE 10
-//#define RESULTSIZE C1_OCH*C1_ICH*C1_OSIZE*C1_OSIZE
 
 #define ALL_WB_SIZE (520+25050+400500+5010)
-//#define ALL_WB_SIZE C1_K * C1_K * C1_OCH * C1_ICH + C1_OCH //weight+bias =20
 
 void load_input(
 		float input[C1_ICH*C1_ISIZE*C1_ISIZE],
@@ -86,15 +77,6 @@ void load_wb(
 #pragma HLS INLINE off
 	int i, j, k, l;
 	unsigned long datasize, offset;
-	//datasize = (unsigned long)input[0];
-	//printf("HLS: datasize=%lu\n", datasize);
-
-//	float tmp[ALL_WB_SIZE];
-//
-//	for (i = 0; i < ALL_WB_SIZE; i++) {
-//		tmp[i] = input[i];
-//	}
-
 	//CONV1_WB
 	offset = 0;
 	for(i = 0; i < C1_OCH; i++) {
@@ -143,73 +125,7 @@ void load_wb(
 
 	return;
 }
-/*
-void load_wb_conv(
-		float input[ALL_WB_SIZE],
-		float conv1_w[C1_OCH][C1_ICH][C1_K][C1_K],
-		float conv1_b[C1_OCH]) {
-	#pragma HLS INLINE off
-	int i, j, k, l;
-	unsigned long datasize, offset;
-	//CONV1_WB
-	offset = 0;
-	for(i = 0; i < C1_OCH; i++) {
-		for(j = 0; j < C1_ICH; j++) {
-			for(k = 0; k < C1_K; k++) {
-				for (l = 0; l < C1_K; l++) {
-					conv1_w[i][j][k][l] = input[offset + i*C1_ICH*C1_K*C1_K + j*C1_K*C1_K + k*C1_K + l];
-				}
-			}
-		}
-	}
-	for(i = 0; i < C1_OCH; i++) {
-		conv1_b[i] = input[offset + C1_OCH*C1_ICH*C1_K*C1_K + i];
-	}
 
-	return;
-}
-*/
-
-/*void conv1_set(ap_uint<16> idd ,int tdatanum[1], int rpacketnum[1], int loopperboard[1]) {//Future work:input as all datanum and outside loop
-	//incase can't divide
-	int tdatatmp;
-	int tdatanormal, tdatalast;
-	int tpacket;
-	int outloopexe = (int)((CONV1_OUTLOOP + (MBD - 1)) / MBD); //ceiling
-	loopperboard[0] = outloopexe;
-	tdatanormal = outloopexe * C1_OSIZE * C1_OCH;
-	if (idd == MBD-1) {//last board
-		outloopexe = CONV1_OUTLOOP - (outloopexe * (MBD - 1));
-	}
-	tdatatmp = outloopexe * C1_OSIZE * C1_OCH;
-	rpacketnum[0] = C1_OCH * C1_OSIZE * C1_OSIZE - tdatatmp;
-	tdatanum[0] = tdatatmp;
-	return;
-}*/
-/*
-void conv1_set(ap_uint<16> idd ,int tdatanum[1], int rpacketnum[1], int loopperboard[1]) {//Future work:input as all datanum and outside loop
-	//incase can't divide
-	int tdatanormal, tdatalast;
-	int tpacketnormal, tpacketlast;
-	int normalloopexe = (int)((CONV1_OUTLOOP + (MBD - 1)) / MBD); //ceiling
-	int lastloopexe = CONV1_OUTLOOP - (normalloopexe * (MBD - 1));
-
-	loopperboard[0] = normalloopexe;
-
-	tdatanormal = normalloopexe * C1_OSIZE * C1_OCH;
-	tpacketnormal = (int) ((tdatanormal+(4-1))/4); //ceiling(data/4) = packets
-	tdatalast = lastloopexe * C1_OSIZE * C1_OCH;
-	tpacketlast = (int) ((tdatalast+(4-1))/4); //ceiling(data/4) = packets
-	if (idd == MBD-1) {//last board
-		rpacketnum[0] = tpacketnormal * (MBD -1);
-		tdatanum[0] = tdatalast;
-	}else {//other boards
-		rpacketnum[0] = tpacketnormal * (MBD - 2) + tpacketlast;
-		tdatanum[0] = tdatanormal;
-	}
-	return;
-}
-*/
 void conv1_part(
 		float input[C1_ICH][C1_ISIZE][C1_ISIZE],
 		float weight[C1_OCH][C1_ICH][C1_K][C1_K],
@@ -247,20 +163,13 @@ void data_trans(
 	ap_fixed<169,69> tmpout[],
 	ap_fixed<169,69> output[]
 ) {
-	//ap_fixed<169,69> head,tmp0,tmp1,tmp2,tmp3;
 	ap_fixed<169,69> packet = 0;
 	ap_uint<16> head;
 	int i, j, k;
 	i = 0;
-	//head = (ap_fixed<169,69>) idd<<153;
 	head = idd;
 	for (i = 0, j = 0; j < CONV1_PKT_SIZE; i+=4, j++) {
 			#pragma HLS PIPELINE II=1
-			/*tmp0 = (ap_fixed<169,69>)senddata[i];
-			tmp1 = (ap_fixed<169,69>)senddata[i+1];
-			tmp2 = (ap_fixed<169,69>)senddata[i+2];
-			tmp3 = (ap_fixed<169,69>)senddata[i+3];
-			tmpout[j] = head | tmp0<<96| tmp1<<64| tmp2<<32| tmp3;*/
 			packet(168,153) = head(15,0);
 			packet(127,96) = ((ap_fixed<32,16>)senddata[i])(31,0); 
 			packet(95,64) =((ap_fixed<32,16>)senddata[i+1])(31,0); 
@@ -296,12 +205,6 @@ void data_recv(
 	    tmp3(31,0) = tmpin[i](31,0);
 	    v[pid][ii[pid]+3] = (float)tmp3;
 	    ii[pid] = ii[pid] +4;
-	    /*pid = (ap_uint<16>)((tmpin[i]>>153)&0xff);
-	    v[pid][ii[pid]] = (float) ((tmpin[i] >> 96)& 0xffff);
-	    v[pid][ii[pid]+1] = (float) ((tmpin[i] >> 64) & 0xffff);
-	    v[pid][ii[pid]+2] = (float) ((tmpin[i] >> 32) & 0xffff);
-	    v[pid][ii[pid]+3] = (float) (tmpin[i] & 0xffff);
-	    ii[pid] = ii[pid] +4;*/
 	}
 	return;
 }
@@ -362,7 +265,6 @@ void conv1_all(
 	static float v[MBD][CONV1_BUF_SIZE];
 	static ap_fixed<169,69> tmpout[CONV1_PKT_SIZE];
 	static ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)];*/
-
 	 float buffer[CONV1_BUF_SIZE];
 	 float v[MBD][CONV1_BUF_SIZE];
 	 ap_fixed<169,69> tmpout[CONV1_PKT_SIZE];
@@ -387,7 +289,6 @@ void conv1(
 #pragma HLS INLINE off
 	int ox, oy, kx, ky, n, m;
 	static int stride = 1;
-
 	//Calculate
 		for (ox = 0; ox < C1_OSIZE; ox++) {
 			for (oy = 0; oy < C1_OSIZE; oy++) {
@@ -396,9 +297,6 @@ void conv1(
 					for (m = 0; m < C1_ICH; m++) {
 						for (kx = 0; kx < C1_K; kx++) {
 							for (ky = 0; ky < C1_K; ky++) {
-
-								//ix[kx] = stride*ox+kx;
-								//iy[ky] = stride*oy+ky;
 								output[n][ox][oy] +=
 										weight[n][m][kx][ky] *
 										input[m][stride*ox+kx][stride*oy+ky];
@@ -463,7 +361,6 @@ void conv2(
 #pragma HLS INLINE off
 	int ox, oy, kx, ky, n, m;
 	static int stride = 1;
-
 	//Calculate
 		for (ox = 0; ox < C2_OSIZE; ox++) {
 			for (oy = 0; oy < C2_OSIZE; oy++) {
@@ -472,8 +369,6 @@ void conv2(
 					for (m = 0; m < C2_ICH; m++) {
 						for (kx = 0; kx < C2_K; kx++) {
 							for (ky = 0; ky < C2_K; ky++) {
-								//ix[kx] = stride*ox+kx;
-								//iy[ky] = stride*oy+ky;
 								output[n][ox][oy] +=
 										weight[n][m][kx][ky] *
 										input[m][stride*ox+kx][stride*oy+ky];
