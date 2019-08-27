@@ -1,5 +1,5 @@
 WEIGHT_PATH = "./weightandinput/"
-HEADER_PATH = "./header/"
+HEADER_PATH = "./headers/"
 
 def weight_to_header(openfile, savefile, macro_name):
     openfile = WEIGHT_PATH + openfile
