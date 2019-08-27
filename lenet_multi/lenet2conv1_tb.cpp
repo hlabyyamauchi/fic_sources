@@ -5,20 +5,23 @@
 #include <ap_fixed.h> //only in C++
 #include <ap_int.h> //only in C++
 
-#include "./headers/conv1_w.h"
-#include "./headers/conv1_b.h"
-#include "./headers/conv2_w.h"
-#include "./headers/conv2_b.h"
-#include "./headers/fc1_w.h"
-#include "./headers/fc1_b.h"
-#include "./headers/fc2_w.h"
-#include "./headers/fc2_b.h"
-#include "./headers/image000.h"
+#include "/home/asap2/yyamauchi/lenettest/fic_sources/headers/conv1_w.h"
+#include "/home/asap2/yyamauchi/lenettest/fic_sources/headers/conv1_b.h"
+#include "/home/asap2/yyamauchi/lenettest/fic_sources/headers/conv2_w.h"
+#include "/home/asap2/yyamauchi/lenettest/fic_sources/headers/conv2_b.h"
+#include "/home/asap2/yyamauchi/lenettest/fic_sources/headers/fc1_w.h"
+#include "/home/asap2/yyamauchi/lenettest/fic_sources/headers/fc1_b.h"
+#include "/home/asap2/yyamauchi/lenettest/fic_sources/headers/fc2_w.h"
+#include "/home/asap2/yyamauchi/lenettest/fic_sources/headers/fc2_b.h"
+#include "/home/asap2/yyamauchi/lenettest/fic_sources/headers/image000.h"
 
 //#include "ap_cint.h"
 //#include "cnnfunc.c"
+#define IMAGEFILE "/home/asap2/yyamauchi/lenettest/fic_sources/weightandinput/image1st.txt"
 
-#define IMAGEFILE "./weightandinput/image1st.txt"
+
+
+
 #define CHECK_PARAMS 0
 
 #define IMAGE_SIZE 1*28*28
@@ -185,6 +188,7 @@ int main() {
 
 	printf("/// LeNet ///\n\n");fflush(stdout);
 
+
 	printf("Memory allocation ...\n");fflush(stdout);
 	if ((image = (float *)malloc(sizeof(float)*IMAGE_SIZE)) == NULL ||
 
@@ -293,24 +297,24 @@ int main() {
 
 	print_params("IMAGE : ", image, IMAGE_SIZE);
 	//Read CONV1 params
-	read_params("./weightandinput/conv1_w.txt", conv1_w, CONV1_W_SIZE);
+	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/weightandinput/conv1_w.txt", conv1_w, CONV1_W_SIZE);
 	print_params("CONV1_W : ", conv1_w, CONV1_W_SIZE);
-	read_params("./weightandinput/conv1_b.txt", conv1_b, CONV1_B_SIZE);
+	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/weightandinput/conv1_b.txt", conv1_b, CONV1_B_SIZE);
 	print_params("CONV1_B : ", conv1_b, CONV1_B_SIZE);
 	//Read CONV2 params
-	read_params("./weightandinput/conv2_w.txt", conv2_w, CONV2_W_SIZE);
+	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/weightandinput/conv2_w.txt", conv2_w, CONV2_W_SIZE);
 	print_params("CONV2_W : ", conv2_w, CONV2_W_SIZE);
-	read_params("./weightandinput/conv2_b.txt", conv2_b, CONV2_B_SIZE);
+	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/weightandinput/conv2_b.txt", conv2_b, CONV2_B_SIZE);
 	print_params("CONV2_B : ", conv2_b, CONV2_B_SIZE);
 	//Read FC1 params
-	read_params("./weightandinput/fc1_w.txt", fc1_w, FC1_W_SIZE);
+	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/weightandinput/fc1_w.txt", fc1_w, FC1_W_SIZE);
 	print_params("FC1_W : ", fc1_w, FC1_W_SIZE);
-	read_params("./weightandinput/fc1_b.txt", fc1_b, FC1_B_SIZE);
+	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/weightandinput/fc1_b.txt", fc1_b, FC1_B_SIZE);
 	print_params("FC1_B : ", fc1_b, FC1_B_SIZE);
 	//Read FC2 params
-	read_params("./weightandinput/fc2_w.txt", fc2_w, FC2_W_SIZE);
+	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/weightandinput/fc2_w.txt", fc2_w, FC2_W_SIZE);
 	print_params("FC2_W : ", fc2_w, FC2_W_SIZE);
-	read_params("./weightandinput/fc2_b.txt", fc2_b, FC2_B_SIZE);
+	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/weightandinput/fc2_b.txt", fc2_b, FC2_B_SIZE);
 	print_params("FC2_B : ", fc2_b, FC2_B_SIZE);
 
 	printf("\n");
