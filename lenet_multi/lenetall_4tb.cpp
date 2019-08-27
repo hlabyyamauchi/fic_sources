@@ -18,7 +18,7 @@
 //#include "ap_cint.h"
 //#include "cnnfunc.c"
 
-#define IMAGEFILE "/home/hlab/mushak/workspace/lenet/txt/image1st.txt"
+#define IMAGEFILE "./weightandinput/image1st.txt"
 #define CHECK_PARAMS 0
 
 #define IMAGE_SIZE 1*28*28
@@ -233,9 +233,9 @@ int main() {
     ap_uint<4> stopt[1];
 
 	printf("Read other boards params ...\n\n");fflush(stdout);
-	read_params("/home/asap2/yyamauchi/lenettest/params/lenet2conv1out_bd1.txt", bufs[0], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);
-	//read_params("/home/asap2/yyamauchi/lenettest/params/conv1out_bd2.txt", bufs[1], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);
-	//read_params("/home/asap2/yyamauchi/lenettest/params/conv1out_bd3.txt", bufs[2], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);
+	read_params("./otherboardparams/params/lenet2conv1out_bd1.txt", bufs[0], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);
+	//read_params("./otherboardparams/params/conv1out_bd2.txt", bufs[1], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);
+	//read_params("./otherboardparams/params/conv1out_bd3.txt", bufs[2], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);
 
 	//ap_fixed<169,69> head,tmp0,tmp1,tmp2,tmp3;
 	ap_fixed<169,69> packet = 0;
@@ -293,24 +293,24 @@ int main() {
 
 	print_params("IMAGE : ", image, IMAGE_SIZE);
 	//Read CONV1 params
-	read_params("/home/hlab/mushak/workspace/lenet/txt/conv1_w.txt", conv1_w, CONV1_W_SIZE);
+	read_params("./weightandinput/conv1_w.txt", conv1_w, CONV1_W_SIZE);
 	print_params("CONV1_W : ", conv1_w, CONV1_W_SIZE);
-	read_params("/home/hlab/mushak/workspace/lenet/txt/conv1_b.txt", conv1_b, CONV1_B_SIZE);
+	read_params("./weightandinput/conv1_b.txt", conv1_b, CONV1_B_SIZE);
 	print_params("CONV1_B : ", conv1_b, CONV1_B_SIZE);
 	//Read CONV2 params
-	read_params("/home/hlab/mushak/workspace/lenet/txt/conv2_w.txt", conv2_w, CONV2_W_SIZE);
+	read_params("./weightandinput/conv2_w.txt", conv2_w, CONV2_W_SIZE);
 	print_params("CONV2_W : ", conv2_w, CONV2_W_SIZE);
-	read_params("/home/hlab/mushak/workspace/lenet/txt/conv2_b.txt", conv2_b, CONV2_B_SIZE);
+	read_params("./weightandinput/conv2_b.txt", conv2_b, CONV2_B_SIZE);
 	print_params("CONV2_B : ", conv2_b, CONV2_B_SIZE);
 	//Read FC1 params
-	read_params("/home/hlab/mushak/workspace/lenet/txt/fc1_w.txt", fc1_w, FC1_W_SIZE);
+	read_params("./weightandinput/fc1_w.txt", fc1_w, FC1_W_SIZE);
 	print_params("FC1_W : ", fc1_w, FC1_W_SIZE);
-	read_params("/home/hlab/mushak/workspace/lenet/txt/fc1_b.txt", fc1_b, FC1_B_SIZE);
+	read_params("./weightandinput/fc1_b.txt", fc1_b, FC1_B_SIZE);
 	print_params("FC1_B : ", fc1_b, FC1_B_SIZE);
 	//Read FC2 params
-	read_params("/home/hlab/mushak/workspace/lenet/txt/fc2_w.txt", fc2_w, FC2_W_SIZE);
+	read_params("./weightandinput/fc2_w.txt", fc2_w, FC2_W_SIZE);
 	print_params("FC2_W : ", fc2_w, FC2_W_SIZE);
-	read_params("/home/hlab/mushak/workspace/lenet/txt/fc2_b.txt", fc2_b, FC2_B_SIZE);
+	read_params("./weightandinput/fc2_b.txt", fc2_b, FC2_B_SIZE);
 	print_params("FC2_B : ", fc2_b, FC2_B_SIZE);
 
 	printf("\n");

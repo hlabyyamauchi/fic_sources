@@ -52,8 +52,8 @@ void outputconv1(float *conv1){
 			}
 		}
 	}
-	write_params("/home/asap2/yyamauchi/lenettest/params/lenet2conv1out_bd0.txt", tmp[0], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);	
-	write_params("/home/asap2/yyamauchi/lenettest/params/lenet2conv1out_bd1.txt", tmp[1], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);	
+	write_params("./params/lenet2conv1out_bd0.txt", tmp[0], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);	
+	write_params("./params/lenet2conv1out_bd1.txt", tmp[1], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);	
 	return;
 }
 void main() {

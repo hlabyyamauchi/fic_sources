@@ -1,4 +1,9 @@
+WEIGHT_PATH = "./weightandinput/"
+HEADER_PATH = "./header/"
+
 def weight_to_header(openfile, savefile, macro_name):
+    openfile = WEIGHT_PATH + openfile
+    savefile = HEADER_PATH + savefile
     with open(openfile) as f:
         data = f.read()
         data = data.replace('\n',',')
@@ -16,4 +21,4 @@ if __name__ == "__main__":
     weight_to_header('fc1_b.txt','fc1_b.h','FC1_B')
     weight_to_header('fc2_w.txt','fc2_w.h','FC2_W')
     weight_to_header('fc2_b.txt','fc2_b.h','FC2_B')
-    weight_to_header('./image1000/image000.txt','image000.h','IMAGE000')
+    weight_to_header('image1st.txt','image000.h','IMAGE000')
