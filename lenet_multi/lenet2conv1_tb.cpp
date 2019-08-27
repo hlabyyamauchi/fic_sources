@@ -385,7 +385,7 @@ int main() {
 	for (j = 0; j < F2_N; j++) wb[offset+j] = fc2_b2[j];
 	offset += F2_N;
 
-	for (j = 0; j < C1_ICH*C1_ISIZE*C1_ISIZE; j++) inputimage[j] = image000[j];
+	for (j = 0; j < C1_ICH*C1_ISIZE*C1_ISIZE; j++) inputimage[j] = image000[j] / 255.0;
 
 
 	printf("ok1\n");
