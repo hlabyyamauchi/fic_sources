@@ -5,15 +5,15 @@
 #include <ap_fixed.h> //only in C++
 #include <ap_int.h> //only in C++
 
-#include "conv1_w.h"
-#include "conv1_b.h"
-#include "conv2_w.h"
-#include "conv2_b.h"
-#include "fc1_w.h"
-#include "fc1_b.h"
-#include "fc2_w.h"
-#include "fc2_b.h"
-#include "image000.h"
+#include "./headers/conv1_w.h"
+#include "./headers/conv1_b.h"
+#include "./headers/conv2_w.h"
+#include "./headers/conv2_b.h"
+#include "./headers/fc1_w.h"
+#include "./headers/fc1_b.h"
+#include "./headers/fc2_w.h"
+#include "./headers/fc2_b.h"
+#include "./headers/image000.h"
 
 //#include "ap_cint.h"
 //#include "cnnfunc.c"
@@ -350,8 +350,8 @@ int main() {
 
 	memcpy(hls_idata, image, 4*1*28*28);
 	*/
-float inputimage[C1_ICH*C1_ISIZE*C1_ISIZE],
-float wb[ALL_WB_SIZE]
+	float inputimage[C1_ICH*C1_ISIZE*C1_ISIZE];
+	float wb[ALL_WB_SIZE];
 	float conv1_w2[C1_OCH*C1_ICH*C1_K*C1_K] = CONV1_W;
 	float conv1_b2[C1_OCH] = CONV1_B;
 	float conv2_w2[C2_OCH*C2_ICH*C2_K*C2_K] = CONV2_W;
