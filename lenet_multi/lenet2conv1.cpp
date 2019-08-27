@@ -2,7 +2,7 @@
 #include <ap_int.h> //only in C++
 
 #include<math.h>
-#define MBD 4 // number of boards
+#define MBD 2 // number of boards
 //conv1 parameter
 #define C1_OCH 20
 #define C1_OSIZE 24
@@ -11,7 +11,7 @@
 #define C1_K 5
 //conv1 partition parameter
 #define CONV1_OUTLOOP 24 // outer loop == C1_OSIZE
-#define CONV1_LOOPEXE 6 // ceiling(CONV1_OUTLOOP/MBD)
+#define CONV1_LOOPEXE 12 // ceiling(CONV1_OUTLOOP/MBD)
 #define CONV1_OUT_SIZE C1_OCH*C1_ICH*C1_OSIZE*C1_OSIZE
 #define CONV1_BUF_SIZE (C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE+3)//means CONV1_OUT_SIZE/CONV1_OUTLOOP*CONV1_LOOPEXE   +3 ceiling for pkt
 #define CONV1_PKT_SIZE (CONV1_BUF_SIZE/4) //send packetnum

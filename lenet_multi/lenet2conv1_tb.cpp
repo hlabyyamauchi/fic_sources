@@ -76,7 +76,7 @@
 #define F2_M 500
 
 //#define RESULT_SIZE C1_OCH*C1_ICH*C1_OSIZE*C1_OSIZE
-#define RESULT_SIZE 25
+#define RESULT_SIZE 10
 
 #define ALL_WB_SIZE (520+25050+400500+5010)
 /////////////
