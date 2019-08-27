@@ -15,12 +15,7 @@
 #include "/home/asap2/yyamauchi/lenettest/fic_sources/lenet_multi/headers/fc2_b.h"
 #include "/home/asap2/yyamauchi/lenettest/fic_sources/lenet_multi/headers/image000.h"
 
-//#include "ap_cint.h"
-//#include "cnnfunc.c"
 #define IMAGEFILE "/home/asap2/yyamauchi/lenettest/fic_sources/lenet_multi/weightandinput/image1st.txt"
-
-
-
 
 #define CHECK_PARAMS 0
 
@@ -95,44 +90,28 @@ int max(int a, int b);
 int min(int a, int b);
 
 void print_params(char *name, float *array, int size);
-
 void print_all_params(float *array, int size);
 void read_params(char *path, float *array, int size);
-
 void write_params(char *path, float *array, int size);
-
 void check_params(float *array1, char *path, int size);
-
 void read_binary(char *path, float *array, int size);
-
 void write_binary(char *path, float *array, int size);
-
 void check_binary(float *array1, char *path, int size);
-
 void padding(float *input, int isize, int ichan, float *output, int pad);
 void convolution(float *input, int isize, int ichan, float *output, int osize, int ochan, float *weight, float *bias, int ksize, int stride);
-
 void maxpooling(float *input, int isize, int ichan, float *output, int osize,  int ksize, int stride);
-
 void relu(float *input, int isize, int ichan);
 void lrn(float *input, int isize, int ichan, float *output, int k, int n, float alpha, float beta);
-
 void classifier(float *input, int isize, float *output, int osize, float *weight, float *bias);
-
 void softmax(float *input, int isize);
-
 void show_result(float *softmax, char *path, int size);
-
 void norm_image(float *image, int size);
 void show_image(float *normed_image, int xy_size);
-
 
 void lenetall(
 		float input[C1_ICH*C1_ISIZE*C1_ISIZE], //read all
 		float output[RESULT_SIZE],//change here for debug
-		//ap_fixed<169,69> input[IN_DATASIZE],
-		//ap_fixed<169,69> output[3],
-		float wb[ALL_WB_SIZE],// 20 weights
+		float wb[ALL_WB_SIZE],
 		ap_fixed<169,69> buf1[],
 		ap_fixed<169,69> sw1out[],
 		ap_fixed<169,69> sw2in[1],
@@ -158,13 +137,6 @@ void my_tanh(float *input, int isize, int ichan) {
   }
   printf("\n");fflush(stdout);
 }
-/*
-void norm_image(float *image, int size) {
-	int i;
-	for (i = 0; i < size; i++) {
-		*(image+i) = *(image+i)/255.0;
-	}
-}*/
 
 int main() {
 	int i, j, k, l;
@@ -185,28 +157,20 @@ int main() {
 	//float hls_wbdata[ALL_WB_SIZE+1];
 	float hls_wbdata[ALL_WB_SIZE];
 	float hls_odata[RESULT_SIZE], hls_result[RESULT_SIZE];
-
 	printf("/// LeNet ///\n\n");fflush(stdout);
-
-
 	printf("Memory allocation ...\n");fflush(stdout);
 	if ((image = (float *)malloc(sizeof(float)*IMAGE_SIZE)) == NULL ||
-
 		(conv1_w = (float *)malloc(sizeof(float)*CONV1_W_SIZE)) == NULL ||
 		(conv1_b = (float *)malloc(sizeof(float)*CONV1_B_SIZE)) == NULL ||
 		(conv1_out = (float *)malloc(sizeof(float)*CONV1_OUT_SIZE)) == NULL ||
 		(pool1_out = (float *)malloc(sizeof(float)*POOL1_OUT_SIZE)) == NULL ||
-
-
 		(conv2_w = (float *)malloc(sizeof(float)*CONV2_W_SIZE)) == NULL ||
 		(conv2_b = (float *)malloc(sizeof(float)*CONV2_B_SIZE)) == NULL ||
 		(conv2_out = (float *)malloc(sizeof(float)*CONV2_OUT_SIZE)) == NULL ||
 		(pool2_out = (float *)malloc(sizeof(float)*POOL2_OUT_SIZE)) == NULL ||
-
 		(fc1_w = (float *)malloc(sizeof(float)*FC1_W_SIZE)) == NULL ||
 		(fc1_b = (float *)malloc(sizeof(float)*FC1_B_SIZE)) == NULL ||
 		(fc1_out = (float *)malloc(sizeof(float)*FC1_OUT_SIZE)) == NULL ||
-
 		(fc2_w = (float *)malloc(sizeof(float)*FC2_W_SIZE)) == NULL ||
 		(fc2_b = (float *)malloc(sizeof(float)*FC2_B_SIZE)) == NULL ||
 		(fc2_out = (float *)malloc(sizeof(float)*FC2_OUT_SIZE)) == NULL ||
@@ -241,16 +205,11 @@ int main() {
 	//read_params("./otherboardparams/params/conv1out_bd2.txt", bufs[1], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);
 	//read_params("./otherboardparams/params/conv1out_bd3.txt", bufs[2], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);
 
-	//ap_fixed<169,69> head,tmp0,tmp1,tmp2,tmp3;
 	ap_fixed<169,69> packet = 0;
 	ap_uint<16> head;
 	int board;
-	//ap_uint<16> otherbid;
 	for (board = 0; board < MBD-1; board++) {
-		//otherbid = (ap_uint<8>)(board+1);
-		//head = (ap_fixed<169,69>) otherbid<<153;
 		head = (ap_uint<16>)(board+1);
-		//head = (ap_uint<16>)(board);
 		for (i = 0, j = 0; j < CONV1_PKT_SIZE; i+=4, j++) {
 			#pragma HLS PIPELINE II=1
 			packet(168,153) = head(15,0);
@@ -264,24 +223,9 @@ int main() {
 	id = (char)0;
 	startt[0] = (ap_uint<4>)1;
 //////////////////////////////////
-
 	printf("Read params ...\n\n");fflush(stdout);
-	//Read image data
-
-/*
-//debug_space begin
-	for (i = 0; i < IMAGE_SIZE; i++) {
-		*(image+i) = 0.0;
-		if (12 < (i%28) && (i%28) < 16) {
-			*(image+i) = 1.0;
-		}
-	}
-//end
-*/
-
 	read_params(IMAGEFILE, image, IMAGE_SIZE);
 	norm_image(image, IMAGE_SIZE);
-
 //show iamge
 	for (i = 0; i < 28; i++) {
 		for (j = 0; j < 28; j++) {
@@ -293,7 +237,6 @@ int main() {
 		}
 		printf ("\n");
 	}
-
 
 	print_params("IMAGE : ", image, IMAGE_SIZE);
 	//Read CONV1 params
@@ -321,39 +264,20 @@ int main() {
 
 	//FEED-FORWARD
 	printf("Feed forward ...\n\n");fflush(stdout);
-
 	convolution(image, 28, 1, conv1_out, 24, 20, conv1_w, conv1_b, 5, 1);//CONV1
 	//my_tanh(conv1_out, 24, 20);
-
 	maxpooling(conv1_out, 24, 20, pool1_out, 12, 2, 2);//POOL1
-
 	convolution(pool1_out, 12, 20, conv2_out, 8, 50, conv2_w, conv2_b, 5, 1);//CONV2
 	//my_tanh(conv2_out, 8, 50);
-
 	maxpooling(conv2_out, 8, 50, pool2_out, 4, 2, 2);//POOL2
-
     classifier(pool2_out, 800, fc1_out, 500, fc1_w, fc1_b);//FC1
 	relu(fc1_out, 1, 500);
-
 	classifier(fc1_out, 500, fc2_out, 10, fc2_w, fc2_b);//FC2
 	softmax(fc2_out, 10);
 	printf("ok1\n");
-
 	print_all_params(fc2_out, 10);//result
-
 	printf("ok1\n");
-/*
-	memcpy(&(hls_wbdata[0]), conv1_w, 4*20*1*5*5);
-	memcpy(&(hls_wbdata[20*1*5*5]), conv1_b, 4*20);
-	memcpy(&(hls_wbdata[20*1*5*5+20]), conv2_w, 4*50*20*5*5);
-	memcpy(&(hls_wbdata[20*1*5*5+20+50*20*5*5]), conv2_b, 4*50);
-	memcpy(&(hls_wbdata[20*1*5*5+20+50*20*5*5+50]), fc1_w, 4*500*800);
-	memcpy(&(hls_wbdata[20*1*5*5+20+50*20*5*5+50+500*800]), fc1_b, 4*500);
-	memcpy(&(hls_wbdata[20*1*5*5+20+50*20*5*5+50+500*800+500]), fc2_w, 4*10*500);
-	memcpy(&(hls_wbdata[20*1*5*5+20+50*20*5*5+50+500*800+500+10*500]), fc2_b, 4*10);
 
-	memcpy(hls_idata, image, 4*1*28*28);
-	*/
 	float inputimage[C1_ICH*C1_ISIZE*C1_ISIZE];
 	float wb[ALL_WB_SIZE];
 	float conv1_w2[C1_OCH*C1_ICH*C1_K*C1_K] = CONV1_W;
@@ -387,11 +311,7 @@ int main() {
 
 	for (j = 0; j < C1_ICH*C1_ISIZE*C1_ISIZE; j++) inputimage[j] = image000[j] / 255.0;
 
-
-	printf("ok1\n");
-//	lenetall(image, hls_odata, hls_wbdata, buf1, sw1out, sw2in, sw2out, id, startt, stopt);
 	lenetall(inputimage, hls_odata, wb, buf1, sw1out, sw2in, sw2out, id, startt, stopt);
-
 	k = 0;
 	for (i = 0; i < 10; i++) {
 		if (abs(*(fc2_out+i) - *(hls_result+i)) > 0.01) {
