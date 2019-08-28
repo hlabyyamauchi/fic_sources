@@ -190,7 +190,7 @@ void data_trans(
 
 void data_recv(
 	int sendnum,
-	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	float v[MBD][CONV2_BUF_SIZE],//recvdata
 	ap_uint<16> idd,
 	ap_fixed<169,69> tmpin[],
 	ap_fixed<169,69> input[]
@@ -217,7 +217,7 @@ void data_recv(
 	return;
 }
 
-
+/*
 void conv1_r(
 	int sendnum,
 	float v[MBD][CONV1_BUF_SIZE],//recvdata
@@ -245,7 +245,8 @@ void conv1_r(
 		}
 	}
 	return;
-}
+}*/
+/*
 void conv1_all(
 		float input[C1_ICH][C1_ISIZE][C1_ISIZE],
 		float weight[C1_OCH][C1_ICH][C1_K][C1_K],
@@ -260,9 +261,9 @@ void conv1_all(
 		ap_fixed<169,69> tdata[],
 		ap_fixed<169,69> rdata[]
 		//below sharable resource from main function
-	  /*float buffer[],
-		ap_fixed<169,69> tmpout[],
-		ap_fixed<169,69> tmpin[]*/
+	  //float buffer[],
+		//ap_fixed<169,69> tmpout[],
+		//ap_fixed<169,69> tmpin[]
 ) {
 	 int j, k;
 	 int sendnum = CONV1_PKT_SIZE;
@@ -275,7 +276,7 @@ void conv1_all(
 	int i;
 //	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
 	return;
-}
+}*/
 void conv1(
 		float input[C1_ICH][C1_ISIZE][C1_ISIZE],
 		float weight[C1_OCH][C1_ICH][C1_K][C1_K],
@@ -352,7 +353,7 @@ void conv2_part(
 		float input[C2_ICH][C2_ISIZE][C2_ISIZE],
 		float weight[C2_OCH][C2_ICH][C2_K][C2_K],
 		float bias[C2_OCH],
-		float buffer[CONV1_BUF_SIZE],
+		float buffer[CONV2_BUF_SIZE],
 		ap_uint<16> idd
 ) {
 #pragma HLS INLINE off
@@ -370,8 +371,8 @@ void conv2_part(
 								buffer[i] += weight[n][m][kx][ky] * input[m][stride*ox+kx][stride*oy+ky];
 							}
 						}
-						i++;
 					}
+					i++;
 				}
 			}
 		}
@@ -381,12 +382,12 @@ void conv2_part(
 
 void conv2_r(
 	int sendnum,
-	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	float v[MBD][CONV2_BUF_SIZE],//recvdata
 	ap_fixed<169,69> input[],
 	ap_fixed<169,69> tmpin[],
 	ap_uint<16> idd,
 	float conv2_out[C2_OCH][C2_OSIZE][C2_OSIZE],
-	float buffer[CONV1_BUF_SIZE]
+	float buffer[CONV2_BUF_SIZE]
 ) {
 	int board;
 	int ox, oy, n, num;
@@ -415,10 +416,10 @@ void conv2_all(
 		float conv1_out[C2_OCH][C2_OSIZE][C2_OSIZE],
 //		float debug_buffer[CONV1_BUF_SIZE], //for simulation
 		ap_uint<16> idd,
-		float buffer[CONV1_BUF_SIZE],
-	 	float v[MBD][CONV1_BUF_SIZE],
-	 	ap_fixed<169,69> tmpout[CONV1_PKT_SIZE],
-	 	ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)],
+		float buffer[CONV2_BUF_SIZE],
+	 	float v[MBD][CONV2_BUF_SIZE],
+	 	ap_fixed<169,69> tmpout[CONV2_PKT_SIZE],
+	 	ap_fixed<169,69> tmpin[CONV2_PKT_SIZE*(MBD-1)],
 		ap_fixed<169,69> tdata[],
 		ap_fixed<169,69> rdata[]
 		//below sharable resource from main function
@@ -428,9 +429,9 @@ void conv2_all(
 ) {
 	 int j, k;
 	 int sendnum = CONV2_PKT_SIZE;
-	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
+	 for (j = 0; j < CONV2_BUF_SIZE; j++) buffer[j] = 0;
 	 for (j = 0; j < MBD; j++)
-		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
+		 for(k = 0; k < CONV2_BUF_SIZE; k++) v[j][k] = 0;
 	conv2_part(input, weight, bias, buffer, idd);
 	data_trans(sendnum, buffer, idd, tmpout, tdata);
 	conv2_r(sendnum, v, rdata, tmpin, idd, conv1_out, buffer);
@@ -618,10 +619,10 @@ void lenetall(
 	static float fc2_b[F2_N];
 	static float fc2_out[F2_N];
 	//buffers
-	 float buffer[CONV1_BUF_SIZE];
-	 float v[MBD][CONV1_BUF_SIZE];
-	 ap_fixed<169,69> tmpout[CONV1_PKT_SIZE];
-	 ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)];
+	 float buffer[CONV2_BUF_SIZE];
+	 float v[MBD][CONV2_BUF_SIZE];
+	 ap_fixed<169,69> tmpout[CONV2_PKT_SIZE];
+	 ap_fixed<169,69> tmpin[CONV2_PKT_SIZE*(MBD-1)];
 
 	static int wb_flag = 0;
 		//Initialize
@@ -637,8 +638,8 @@ void lenetall(
 	idd = id;
 	if (idd==0) sw2out[0] = 1;
 	else sync= sw2in[0];
-	//conv1(image, conv1_w, conv1_b, conv1_out);
-	conv1_all(image, conv1_w, conv1_b, conv1_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
+	conv1(image, conv1_w, conv1_b, conv1_out);
+	//conv1_all(image, conv1_w, conv1_b, conv1_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	//store_output_debug(conv1_out, output);
 	pool1(conv1_out, pool1_out);
 	//conv2(pool1_out, conv2_w, conv2_b, conv2_out);
