@@ -34,8 +34,15 @@
 #define C1_ICH 1
 #define C1_ISIZE 28
 #define C1_K 5
-
 #define CONV1_LOOPEXE  12// ceiling(CONV1_OUTLOOP/MBD)
+
+#define C2_OCH 50
+#define C2_OSIZE 8
+#define C2_ICH 20
+#define C2_ISIZE 12
+#define C2_K 5
+#define C2_P 10
+#define CONV2_LOOPEXE 4
 
 
 void outputconv1(float *conv1){
@@ -52,8 +59,26 @@ void outputconv1(float *conv1){
 			}
 		}
 	}
-	write_params("./params/lenet2conv1out_bd0.txt", tmp[0], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);	
-	write_params("./params/lenet2conv1out_bd1.txt", tmp[1], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);	
+	write_params("./params/lenet2conv1out_bd0.txt", tmp[0], C1_OCH*C1_OSIZE*CONV1_LOOPEXE);	
+	write_params("./params/lenet2conv1out_bd1.txt", tmp[1], C1_OCH*C1_OSIZE*CONV1_LOOPEXE);	
+	return;
+}
+void outputconv2(float *conv2){
+	int i, j, k, l, bid;
+  	float tmp[MBD][C2_OCH*C2_ICH*C2_OSIZE*CONV2_LOOPEXE];
+	for (bid = 0; bid < MBD; bid++) {
+		l = 0;
+		for (j = bid*CONV2_LOOPEXE; j < (bid+1)*CONV2_LOOPEXE; j++) {
+			for (i = 0; i < C2_OSIZE; i++) {
+				for (k = 0; k < C2_OCH; k++) {
+				  	tmp[bid][l] = *(conv2+k*C2_OSIZE*C2_OSIZE+j*C2_OSIZE+i);
+				  	l++;
+				}
+			}
+		}
+	}
+	write_params("./params/lenet2conv2out_bd0.txt", tmp[0], C2_OCH*C2_OSIZE*CONV2_LOOPEXE);	
+	write_params("./params/lenet2conv2out_bd1.txt", tmp[1], C2_OCH*C2_OSIZE*CONV2_LOOPEXE);	
 	return;
 }
 void main() {
@@ -167,6 +192,7 @@ void main() {
 
 	convolution(pool1_out, 12, 20, conv2_out, 8, 50, conv2_w, conv2_b, 5, 1);//CONV2
 	//my_tanh(conv2_out, 8, 50);
+	outputconv2(conv2_out);
   
 	maxpooling(conv2_out, 8, 50, pool2_out, 4, 2, 2);//POOL2
 

@@ -12,8 +12,8 @@
 //conv1 partition parameter
 #define CONV1_OUTLOOP 24 // outer loop == C1_OSIZE
 #define CONV1_LOOPEXE 12 // ceiling(CONV1_OUTLOOP/MBD)
-#define CONV1_OUT_SIZE C1_OCH*C1_ICH*C1_OSIZE*C1_OSIZE
-#define CONV1_BUF_SIZE (C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE+3)//means CONV1_OUT_SIZE/CONV1_OUTLOOP*CONV1_LOOPEXE   +3 ceiling for pkt
+#define CONV1_OUT_SIZE C1_OCH*C1_OSIZE*C1_OSIZE
+#define CONV1_BUF_SIZE (C1_OCH*C1_OSIZE*CONV1_LOOPEXE+3)//means CONV1_OUT_SIZE/CONV1_OUTLOOP*CONV1_LOOPEXE   +3 ceiling for pkt
 #define CONV1_PKT_SIZE (CONV1_BUF_SIZE/4) //send packetnum
 ///////////////
 #define P1_OSIZE 12
@@ -25,6 +25,12 @@
 #define C2_ISIZE 12
 #define C2_K 5
 #define C2_P 10
+
+#define CONV2_OUTLOOP 8
+#define CONV2_LOOPEXE 4
+#define CONV2_OUT_SIZE C2_OCH*C2_OSIZE*C2_OSIZE
+#define CONV2_BUF_SIZE (C2_OCH*C2_OSIZE*CONV2_LOOPEXE+3)
+#define CONV2_PKT_SIZE (CONV2_BUF_SIZE/4) 
 
 #define P2_OSIZE 4
 #define P2_K 2
@@ -148,8 +154,8 @@ void conv1_part(
 								buffer[i] += weight[n][m][kx][ky] * input[m][stride*ox+kx][stride*oy+ky];
 							}
 						}
-						i++;
 					}
+					i++;
 				}
 			}
 		}
@@ -158,6 +164,7 @@ void conv1_part(
 }
 
 void data_trans(
+	int sendnum,
 	float senddata[], //buffer in conv1_part
 	ap_uint<16> idd,
 	ap_fixed<169,69> tmpout[],
@@ -168,7 +175,7 @@ void data_trans(
 	int i, j, k;
 	i = 0;
 	head = idd;
-	for (i = 0, j = 0; j < CONV1_PKT_SIZE; i+=4, j++) {
+	for (i = 0, j = 0; j < sendnum; i+=4, j++) {
 			#pragma HLS PIPELINE II=1
 			packet(168,153) = head(15,0);
 			packet(127,96) = ((ap_fixed<32,16>)senddata[i])(31,0); 
@@ -177,11 +184,12 @@ void data_trans(
 			packet(31,0) =((ap_fixed<32,16>)senddata[i+3])(31,0); 
 			tmpout[j] = packet;
 	}
-	for (k = 0; k < CONV1_PKT_SIZE; k++) output[k] = tmpout[k]; //send data
+	for (k = 0; k < sendnum; k++) output[k] = tmpout[k]; //send data
 	return;
 }
 
 void data_recv(
+	int sendnum,
 	float v[MBD][CONV1_BUF_SIZE],//recvdata
 	ap_uint<16> idd,
 	ap_fixed<169,69> tmpin[],
@@ -191,9 +199,9 @@ void data_recv(
 	ap_uint<16> pid;
 	ap_fixed<32,16> tmp0, tmp1, tmp2, tmp3;
 	int ii[MBD]; //receive counter
-	for(i=0; i<CONV1_PKT_SIZE*(MBD-1); i++) tmpin[i] = input[i]; //receive data
+	for(i=0; i<sendnum*(MBD-1); i++) tmpin[i] = input[i]; //receive data
 	for(i=0; i<MBD; i++) ii[i]=0;
-	for(i=0; i<CONV1_PKT_SIZE*(MBD-1); i++) { //Future work: Adaptation for ilegular patturn?
+	for(i=0; i<sendnum*(MBD-1); i++) { //Future work: Adaptation for ilegular patturn?
 #pragma HLS PIPELINE II=1
 		pid(15,0) = tmpin[i](168,153);
 	    tmp0(31,0) = tmpin[i](127,96);
@@ -209,17 +217,9 @@ void data_recv(
 	return;
 }
 
-void conv1_t(
-	float buffer[CONV1_BUF_SIZE],
-	ap_uint<16> idd,
-	ap_fixed<169,69> tmpout[],
-	ap_fixed<169,69> output[]
-) {
-	 data_trans(buffer, idd, tmpout, output);
-	return;
-}
 
 void conv1_r(
+	int sendnum,
 	float v[MBD][CONV1_BUF_SIZE],//recvdata
 	ap_fixed<169,69> input[],
 	ap_fixed<169,69> tmpin[],
@@ -229,7 +229,7 @@ void conv1_r(
 ) {
 	int board;
 	int ox, oy, n, num;
-	data_recv(v, idd, tmpin, input); //data receive
+	data_recv(sendnum, v, idd, tmpin, input); //data receive
 	//arrange results into conv1_out
 	for (board = 0; board < MBD; board++) {
 		num = 0;
@@ -246,6 +246,7 @@ void conv1_r(
 	}
 	return;
 }
+
 void conv1_all(
 		float input[C1_ICH][C1_ISIZE][C1_ISIZE],
 		float weight[C1_OCH][C1_ICH][C1_K][C1_K],
@@ -253,29 +254,25 @@ void conv1_all(
 		float conv1_out[C1_OCH][C1_OSIZE][C1_OSIZE],
 //		float debug_buffer[CONV1_BUF_SIZE], //for simulation
 		ap_uint<16> idd,
+		float buffer[CONV1_BUF_SIZE],
+	 	float v[MBD][CONV1_BUF_SIZE],
+	 	ap_fixed<169,69> tmpout[CONV1_PKT_SIZE],
+	 	ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)],
 		ap_fixed<169,69> tdata[],
 		ap_fixed<169,69> rdata[]
 		//below sharable resource from main function
-	  /*float buffer[],
-		ap_fixed<169,69> tmpout[],
-		ap_fixed<169,69> tmpin[]*/
+	  //float buffer[],
+		//ap_fixed<169,69> tmpout[],
+		//ap_fixed<169,69> tmpin[]
 ) {
-	/*
-	static float buffer[CONV1_BUF_SIZE];
-	static float v[MBD][CONV1_BUF_SIZE];
-	static ap_fixed<169,69> tmpout[CONV1_PKT_SIZE];
-	static ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)];*/
-	 float buffer[CONV1_BUF_SIZE];
-	 float v[MBD][CONV1_BUF_SIZE];
-	 ap_fixed<169,69> tmpout[CONV1_PKT_SIZE];
-	 ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)];
 	 int j, k;
+	 int sendnum = CONV1_PKT_SIZE;
 	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
 	 for (j = 0; j < MBD; j++)
 		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
 	conv1_part(input, weight, bias, buffer, idd);
-	conv1_t(buffer, idd, tmpout, tdata);
-	conv1_r(v, rdata, tmpin, idd, conv1_out, buffer);
+	data_trans(sendnum, buffer, idd, tmpout, tdata);
+	conv1_r(sendnum, v, rdata, tmpin, idd, conv1_out, buffer);
 	int i;
 //	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
 	return;
@@ -349,6 +346,97 @@ void pool1(
 		  }
 		}
 	  }
+	return;
+}
+
+void conv2_part(
+		float input[C2_ICH][C2_ISIZE][C2_ISIZE],
+		float weight[C2_OCH][C2_ICH][C2_K][C2_K],
+		float bias[C2_OCH],
+		float buffer[CONV1_BUF_SIZE],
+		ap_uint<16> idd
+) {
+#pragma HLS INLINE off
+	int ox, oy, kx, ky, n, m;
+	int i = 0;
+	static int stride = 1;
+		for (ox = 0 ; ox < C2_OSIZE; ox++) {
+			if ((ox < idd * CONV2_LOOPEXE) || ((idd+1) * CONV2_LOOPEXE <= ox)) continue;
+			for (oy = 0; oy < C2_OSIZE; oy++) {
+				for (n = 0; n < C2_OCH; n++) {
+					buffer[i] = bias[n];
+					for (m = 0; m < C2_ICH; m++) {
+						for (kx = 0; kx < C2_K; kx++) {
+							for (ky = 0; ky < C2_K; ky++) {
+								buffer[i] += weight[n][m][kx][ky] * input[m][stride*ox+kx][stride*oy+ky];
+							}
+						}
+					}
+					i++;
+				}
+			}
+		}
+		// if (tdatanum != i) printf("error\n");
+	return;
+}
+
+void conv2_r(
+	int sendnum,
+	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	ap_fixed<169,69> input[],
+	ap_fixed<169,69> tmpin[],
+	ap_uint<16> idd,
+	float conv2_out[C2_OCH][C2_OSIZE][C2_OSIZE],
+	float buffer[CONV1_BUF_SIZE]
+) {
+	int board;
+	int ox, oy, n, num;
+	data_recv(sendnum, v, idd, tmpin, input); //data receive
+	//arrange results into conv1_out
+	for (board = 0; board < MBD; board++) {
+		num = 0;
+		for (ox = 0 ; ox < C2_OSIZE; ox++) {
+			if ((ox < board * CONV2_LOOPEXE) || ((board+1) * CONV2_LOOPEXE <= ox)) continue;
+			for (oy = 0; oy < C2_OSIZE; oy++) {
+				for (n = 0; n < C2_OCH; n++) {
+					if (board == idd) conv2_out[n][ox][oy] = buffer[num];
+					else conv2_out[n][ox][oy] = v[board][num];
+					num++;
+				}
+			}
+		}
+	}
+	return;
+}
+
+void conv2_all(
+		float input[C2_ICH][C2_ISIZE][C2_ISIZE],
+		float weight[C2_OCH][C2_ICH][C2_K][C2_K],
+		float bias[C2_OCH],
+		float conv1_out[C2_OCH][C2_OSIZE][C2_OSIZE],
+//		float debug_buffer[CONV1_BUF_SIZE], //for simulation
+		ap_uint<16> idd,
+		float buffer[CONV1_BUF_SIZE],
+	 	float v[MBD][CONV1_BUF_SIZE],
+	 	ap_fixed<169,69> tmpout[CONV1_PKT_SIZE],
+	 	ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)],
+		ap_fixed<169,69> tdata[],
+		ap_fixed<169,69> rdata[]
+		//below sharable resource from main function
+	  /*float buffer[],
+		ap_fixed<169,69> tmpout[],
+		ap_fixed<169,69> tmpin[]*/
+) {
+	 int j, k;
+	 int sendnum = CONV2_PKT_SIZE;
+	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
+	 for (j = 0; j < MBD; j++)
+		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
+	conv2_part(input, weight, bias, buffer, idd);
+	data_trans(sendnum, buffer, idd, tmpout, tdata);
+	conv2_r(sendnum, v, rdata, tmpin, idd, conv1_out, buffer);
+	int i;
+//	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
 	return;
 }
 
@@ -530,6 +618,11 @@ void lenetall(
 	static float fc2_w[F2_N][F2_M];
 	static float fc2_b[F2_N];
 	static float fc2_out[F2_N];
+	//buffers
+	 float buffer[CONV1_BUF_SIZE];
+	 float v[MBD][CONV1_BUF_SIZE];
+	 ap_fixed<169,69> tmpout[CONV1_PKT_SIZE];
+	 ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)];
 
 	static int wb_flag = 0;
 		//Initialize
@@ -546,11 +639,11 @@ void lenetall(
 	if (idd==0) sw2out[0] = 1;
 	else sync= sw2in[0];
 	//conv1(image, conv1_w, conv1_b, conv1_out);
-	conv1_all(image, conv1_w, conv1_b, conv1_out, idd, sw1out, buf1);
+	conv1_all(image, conv1_w, conv1_b, conv1_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	//store_output_debug(conv1_out, output);
 	pool1(conv1_out, pool1_out);
-
-	conv2(pool1_out, conv2_w, conv2_b, conv2_out);
+	//conv2(pool1_out, conv2_w, conv2_b, conv2_out);
+	conv2_all(pool1_out, conv2_w, conv2_b, conv2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	pool2(conv2_out, pool2_out);
 
 	flatten(pool2_out, flat_out);
