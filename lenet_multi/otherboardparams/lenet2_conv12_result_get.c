@@ -34,8 +34,14 @@
 #define C1_ICH 1
 #define C1_ISIZE 28
 #define C1_K 5
-
 #define CONV1_LOOPEXE  12// ceiling(CONV1_OUTLOOP/MBD)
+
+#define C2_OCH 50
+#define C2_OSIZE 8
+#define C2_ICH 20
+#define C2_ISIZE 12
+#define C2_K 5
+#define C2_P 10
 #define CONV2_LOOPEXE 4
 
 
