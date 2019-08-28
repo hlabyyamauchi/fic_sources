@@ -348,6 +348,97 @@ void pool1(
 	return;
 }
 
+void conv2_part(
+		float input[C2_ICH][C2_ISIZE][C2_ISIZE],
+		float weight[C2_OCH][C2_ICH][C2_K][C2_K],
+		float bias[C2_OCH],
+		float buffer[CONV1_BUF_SIZE],
+		ap_uint<16> idd
+) {
+#pragma HLS INLINE off
+	int ox, oy, kx, ky, n, m;
+	int i = 0;
+	static int stride = 1;
+		for (ox = 0 ; ox < C2_OSIZE; ox++) {
+			if ((ox < idd * CONV2_LOOPEXE) || ((idd+1) * CONV2_LOOPEXE <= ox)) continue;
+			for (oy = 0; oy < C2_OSIZE; oy++) {
+				for (n = 0; n < C2_OCH; n++) {
+					buffer[i] = bias[n];
+					for (m = 0; m < C2_ICH; m++) {
+						for (kx = 0; kx < C2_K; kx++) {
+							for (ky = 0; ky < C2_K; ky++) {
+								buffer[i] += weight[n][m][kx][ky] * input[m][stride*ox+kx][stride*oy+ky];
+							}
+						}
+						i++;
+					}
+				}
+			}
+		}
+		// if (tdatanum != i) printf("error\n");
+	return;
+}
+
+void conv2_r(
+	int sendnum,
+	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	ap_fixed<169,69> input[],
+	ap_fixed<169,69> tmpin[],
+	ap_uint<16> idd,
+	float conv2_out[C1_OCH][C1_OSIZE][C1_OSIZE],
+	float buffer[CONV1_BUF_SIZE]
+) {
+	int board;
+	int ox, oy, n, num;
+	data_recv(sendnum, v, idd, tmpin, input); //data receive
+	//arrange results into conv1_out
+	for (board = 0; board < MBD; board++) {
+		num = 0;
+		for (ox = 0 ; ox < C2_OSIZE; ox++) {
+			if ((ox < board * CONV2_LOOPEXE) || ((board+1) * CONV2_LOOPEXE <= ox)) continue;
+			for (oy = 0; oy < C2_OSIZE; oy++) {
+				for (n = 0; n < C2_OCH; n++) {
+					if (board == idd) conv2_out[n][ox][oy] = buffer[num];
+					else conv2_out[n][ox][oy] = v[board][num];
+					num++;
+				}
+			}
+		}
+	}
+	return;
+}
+
+void conv2_all(
+		float input[C2_ICH][C2_ISIZE][C2_ISIZE],
+		float weight[C2_OCH][C2_ICH][C2_K][C2_K],
+		float bias[C2_OCH],
+		float conv1_out[C2_OCH][C2_OSIZE][C2_OSIZE],
+//		float debug_buffer[CONV1_BUF_SIZE], //for simulation
+		ap_uint<16> idd,
+		float buffer[CONV1_BUF_SIZE],
+	 	float v[MBD][CONV1_BUF_SIZE],
+	 	ap_fixed<169,69> tmpout[CONV1_PKT_SIZE],
+	 	ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)],
+		ap_fixed<169,69> tdata[],
+		ap_fixed<169,69> rdata[]
+		//below sharable resource from main function
+	  /*float buffer[],
+		ap_fixed<169,69> tmpout[],
+		ap_fixed<169,69> tmpin[]*/
+) {
+	 int j, k;
+	 int sendnum = CONV2_PKT_SIZE;
+	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
+	 for (j = 0; j < MBD; j++)
+		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
+	conv2_part(input, weight, bias, buffer, idd);
+	data_trans(sendnum, buffer, idd, tmpout, tdata);
+	conv2_r(sendnum, v, rdata, tmpin, idd, conv1_out, buffer);
+	int i;
+//	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
+	return;
+}
+
 void conv2(
 		float input[C2_ICH][C2_ISIZE][C2_ISIZE],
 		float weight[C2_OCH][C2_ICH][C2_K][C2_K],
@@ -550,8 +641,8 @@ void lenetall(
 	conv1_all(image, conv1_w, conv1_b, conv1_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	//store_output_debug(conv1_out, output);
 	pool1(conv1_out, pool1_out);
-
-	conv2(pool1_out, conv2_w, conv2_b, conv2_out);
+	//conv2(pool1_out, conv2_w, conv2_b, conv2_out);
+	conv2_all(image, conv2_w, conv2_b, conv2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	pool2(conv2_out, pool2_out);
 
 	flatten(pool2_out, flat_out);
