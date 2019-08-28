@@ -385,7 +385,7 @@ void conv2_r(
 	ap_fixed<169,69> input[],
 	ap_fixed<169,69> tmpin[],
 	ap_uint<16> idd,
-	float conv2_out[C1_OCH][C1_OSIZE][C1_OSIZE],
+	float conv2_out[C2_OCH][C2_OSIZE][C2_OSIZE],
 	float buffer[CONV1_BUF_SIZE]
 ) {
 	int board;
@@ -642,7 +642,7 @@ void lenetall(
 	//store_output_debug(conv1_out, output);
 	pool1(conv1_out, pool1_out);
 	//conv2(pool1_out, conv2_w, conv2_b, conv2_out);
-	conv2_all(image, conv2_w, conv2_b, conv2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
+	conv2_all(pool1_out, conv2_w, conv2_b, conv2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	pool2(conv2_out, pool2_out);
 
 	flatten(pool2_out, flat_out);
