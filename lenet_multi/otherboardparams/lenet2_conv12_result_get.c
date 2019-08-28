@@ -59,8 +59,8 @@ void outputconv1(float *conv1){
 			}
 		}
 	}
-	write_params("./params/lenet2conv1out_bd0.txt", tmp[0], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);	
-	write_params("./params/lenet2conv1out_bd1.txt", tmp[1], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);	
+	write_params("./params/lenet2conv1out_bd0.txt", tmp[0], C1_OCH*C1_OSIZE*CONV1_LOOPEXE);	
+	write_params("./params/lenet2conv1out_bd1.txt", tmp[1], C1_OCH*C1_OSIZE*CONV1_LOOPEXE);	
 	return;
 }
 void outputconv2(float *conv2){
@@ -77,8 +77,8 @@ void outputconv2(float *conv2){
 			}
 		}
 	}
-	write_params("./params/lenet2conv2out_bd0.txt", tmp[0], C2_OCH*C2_ICH*C2_OSIZE*CONV2_LOOPEXE);	
-	write_params("./params/lenet2conv2out_bd1.txt", tmp[1], C2_OCH*C2_ICH*C2_OSIZE*CONV2_LOOPEXE);	
+	write_params("./params/lenet2conv2out_bd0.txt", tmp[0], C2_OCH*C2_OSIZE*CONV2_LOOPEXE);	
+	write_params("./params/lenet2conv2out_bd1.txt", tmp[1], C2_OCH*C2_OSIZE*CONV2_LOOPEXE);	
 	return;
 }
 void main() {
