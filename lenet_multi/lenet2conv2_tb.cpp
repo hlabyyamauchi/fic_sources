@@ -187,10 +187,10 @@ int main() {
 ////////////LeNet part/////////////
 	float *bufs[MBD-1];
 	float *bufsconv2[MBD-1];
-	//ap_fixed<169,69> buf1[CONV1_PKT_SIZE*(MBD-1)+CONV2_PKT_SIZE*(MBD-1)];
-	ap_fixed<169,69> buf1[CONV2_PKT_SIZE*(MBD-1)];
-	//ap_fixed<169,69> sw1out[CONV1_PKT_SIZE+CONV2_PKT_SIZE];
-	ap_fixed<169,69> sw1out[CONV2_PKT_SIZE];
+	ap_fixed<169,69> buf1[CONV1_PKT_SIZE*(MBD-1)+CONV2_PKT_SIZE*(MBD-1)];
+	//ap_fixed<169,69> buf1[CONV2_PKT_SIZE*(MBD-1)];
+	ap_fixed<169,69> sw1out[CONV1_PKT_SIZE+CONV2_PKT_SIZE];
+	//ap_fixed<169,69> sw1out[CONV2_PKT_SIZE];
 	for (i = 0; i < MBD-1; i++) {
 		if ((bufs[i] = (float *)malloc(sizeof(float)*CONV1_BUF_SIZE)) == NULL ||
 				(bufsconv2[i] = (float *)malloc(sizeof(float)*CONV2_BUF_SIZE))== NULL ||
@@ -222,7 +222,7 @@ int main() {
 	ap_fixed<169,69> packet = 0;
 	ap_uint<16> head;
 	int board;
-	/*for (board = 0; board < MBD-1; board++) {
+	for (board = 0; board < MBD-1; board++) {
 		head = (ap_uint<16>)(board+1);
 		for (i = 0, j = 0; j < CONV1_PKT_SIZE; i+=4, j++) {
 			#pragma HLS PIPELINE II=1
@@ -233,7 +233,7 @@ int main() {
 			packet(31,0) =((ap_fixed<32,16>)bufs[board][i+3])(31,0);
 			buf1[board*CONV1_PKT_SIZE +j] = packet;
 		}
-	}*/
+	}
 	for (board = 0; board < MBD-1; board++) {
 		head = (ap_uint<16>)(board+1);
 		for (i = 0, j = 0; j < CONV2_PKT_SIZE; i+=4, j++) {
@@ -243,8 +243,8 @@ int main() {
 				packet(95,64) =((ap_fixed<32,16>)bufsconv2[board][i+1])(31,0);
 				packet(63,32) = ((ap_fixed<32,16>)bufsconv2[board][i+2])(31,0);
 				packet(31,0) =((ap_fixed<32,16>)bufsconv2[board][i+3])(31,0);
-				//buf1[(MBD-1)*CONV1_PKT_SIZE + board*CONV2_PKT_SIZE +j] = packet;
-				buf1[board*CONV2_PKT_SIZE +j] = packet;
+				buf1[(MBD-1)*CONV1_PKT_SIZE + board*CONV2_PKT_SIZE +j] = packet;
+				//buf1[board*CONV2_PKT_SIZE +j] = packet;
 			}
 	}
 	id = (char)0;
