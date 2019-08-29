@@ -49,6 +49,12 @@
 #define F2_M 500
 #define F2_P 10
 
+#define F2_OUTLOOP 10
+#define F2_LOOPEXE 5
+#define F2_OUT_SIZE 10
+#define F2_BUF_SIZE (F1_LOOPEXE+3)
+#define F2_PKT_SIZE (F1_BUF_SIZE/4) 
+
 #define RESULTSIZE 10
 
 #define ALL_WB_SIZE (520+25050+400500+5010)
@@ -612,6 +618,82 @@ void fc1(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], float ou
 	return;
 }
 
+void fc2_r(
+	int sendnum,
+	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	ap_fixed<169,69> input[],
+	ap_fixed<169,69> tmpin[],
+	ap_uint<16> idd,
+	float fc2_out[F2_N],
+	float buffer[CONV1_BUF_SIZE]
+) {
+	int board;
+	int ox, oy, n, num, i;
+	int inputnum = (CONV1_PKT_SIZE+CONV2_PKT_SIZE+F1_PKT_SIZE)*(MBD-1);
+	data_recv(sendnum, inputnum, v, idd, tmpin, input); //data receive
+	//arrange results into conv1_out
+	for (board = 0; board < MBD; board++) {
+		num = 0;
+		for (i = 0; i < F1_N; i++) {
+			if ((i < board * F2_LOOPEXE) || ((board+1) * F2_LOOPEXE <= i)) continue;
+			if (board == idd) fc2_out[i] = buffer[num];
+			else fc2_out[i] = v[board][num];
+			num++;
+		}
+	}
+	return;
+}
+
+void fc2_part(float input[F2_M], float weight[F2_N][F2_M], float bias[F2_N], float buffer[CONV1_BUF_SIZE], ap_uint<16> idd
+) {
+#pragma HLS INLINE off
+	int i, j, p;
+	int num = 0;
+	for (i = 0; i < F2_N; i++) {
+		if ((i < idd * F2_LOOPEXE) || ((idd+1) * F2_LOOPEXE <= i)) continue;
+		buffer[num] = bias[i];
+		for (j = 0; j < F2_M; j+=F2_P) {
+			for (p = 0; p < F2_P; p++) {
+				#pragma HLS UNROLL
+				buffer[num] += input[j+p] * weight[i][j+p];
+			}
+		}
+		if (buffer[num] < 0.0) buffer[num] = 0.0;
+		num++;
+	}
+	return;
+}
+void fc2_all(
+		float input[F2_M],
+		float weight[F2_N][F2_M],
+		float bias[F2_N],
+		float fc2_out[F2_N],
+//		float debug_buffer[CONV1_BUF_SIZE], //for simulation
+		ap_uint<16> idd,
+		float buffer[CONV1_BUF_SIZE],
+	 	float v[MBD][CONV1_BUF_SIZE],
+	 	ap_fixed<169,69> tmpout[CONV1_PKT_SIZE],
+	 	ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)],
+		ap_fixed<169,69> tdata[],
+		ap_fixed<169,69> rdata[]
+		//below sharable resource from main function
+	  /*float buffer[],
+		ap_fixed<169,69> tmpout[],
+		ap_fixed<169,69> tmpin[]*/
+) {
+	 int j, k;
+	 int sendnum = F2_PKT_SIZE;
+	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
+	 for (j = 0; j < MBD; j++)
+		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
+	fc2_part(input, weight, bias, buffer, idd);
+	data_trans(sendnum, buffer, idd, tmpout, tdata);
+	fc2_r(sendnum, v, rdata, tmpin, idd, fc2_out, buffer);
+	int i;
+//	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
+	return;
+}
+
 void fc2(float input[F2_M], float weight[F2_N][F2_M], float bias[F2_N], float output[F2_N]) {
 #pragma HLS INLINE off
 	int i, j, k, l, p;
@@ -736,7 +818,8 @@ void lenetall(
 	//fc1(flat_out, fc1_w, fc1_b, fc1_out);
 	fc1_all(flat_out, fc1_w, fc1_b, fc1_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 
-	fc2(fc1_out, fc2_w, fc2_b, fc2_out);
+	//fc2(fc1_out, fc2_w, fc2_b, fc2_out);
+	fc2_all(flat_out, fc2_w, fc2_b, fc2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 
 	store_output(fc2_out, output);
 	stopt[0] = 1;//timer stop

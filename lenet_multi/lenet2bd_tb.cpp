@@ -76,6 +76,12 @@
 #define F2_N 10
 #define F2_M 500
 
+#define F2_OUTLOOP 10
+#define F2_LOOPEXE 5
+#define F2_OUT_SIZE 10
+#define F2_BUF_SIZE (F1_LOOPEXE+3)
+#define F2_PKT_SIZE (F1_BUF_SIZE/4) 
+
 //#define RESULT_SIZE C1_OCH*C1_ICH*C1_OSIZE*C1_OSIZE
 #define RESULT_SIZE 10
 
@@ -194,15 +200,17 @@ int main() {
 	float *bufs[MBD-1];
 	float *bufsconv2[MBD-1];
 	float *bufsfc1[MBD-1];
+	float *bufsfc2[MBD-1];
 
-	ap_fixed<169,69> buf1[CONV1_PKT_SIZE*(MBD-1)+CONV2_PKT_SIZE*(MBD-1)+F1_PKT_SIZE*(MBD-1)];
+	ap_fixed<169,69> buf1[CONV1_PKT_SIZE*(MBD-1)+CONV2_PKT_SIZE*(MBD-1)+F1_PKT_SIZE*(MBD-1)+F2_PKT_SIZE*(MBD-1)];
 	//ap_fixed<169,69> buf1[CONV2_PKT_SIZE*(MBD-1)];
-	ap_fixed<169,69> sw1out[CONV1_PKT_SIZE+CONV2_PKT_SIZE+F1_PKT_SIZE];
+	ap_fixed<169,69> sw1out[CONV1_PKT_SIZE+CONV2_PKT_SIZE+F1_PKT_SIZE+F2_PKT_SIZE];
 	//ap_fixed<169,69> sw1out[CONV2_PKT_SIZE];
 	for (i = 0; i < MBD-1; i++) {
 		if ((bufs[i] = (float *)malloc(sizeof(float)*CONV1_BUF_SIZE)) == NULL ||
 				(bufsconv2[i] = (float *)malloc(sizeof(float)*CONV2_BUF_SIZE))== NULL ||
 				(bufsfc1[i] = (float *)malloc(sizeof(float)*F1_BUF_SIZE))== NULL ||
+				(bufsfc2[i] = (float *)malloc(sizeof(float)*F1_BUF_SIZE))== NULL ||
 				0) {
 			printf("MemError\n");
 			exit(1);
@@ -214,10 +222,13 @@ int main() {
 		}
 		for (j = 0; j < CONV2_BUF_SIZE; j++) {
 					bufsconv2[i][j] = 0;
-				}
+		}
 		for (j = 0; j < F1_BUF_SIZE; j++) {
 							bufsfc1[i][j] = 0;
-						}
+		}
+		for (j = 0; j < F2_BUF_SIZE; j++) {
+							bufsfc2[i][j] = 0;
+		}
 	}
 	ap_fixed<169,69> sw2in[1];
 	ap_fixed<169,69> sw2out[1];
@@ -231,6 +242,7 @@ int main() {
 	//read_params("./otherboardparams/params/conv1out_bd3.txt", bufs[2], C1_OCH*C1_ICH*C1_OSIZE*CONV1_LOOPEXE);
 	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/lenet_multi/otherboardparams/params/lenet2conv2out_bd1.txt", bufsconv2[0], C2_OCH*C2_OSIZE*CONV2_LOOPEXE);
 	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/lenet_multi/otherboardparams/params/lenet2fc1out_bd1.txt", bufsfc1[0], F1_LOOPEXE);
+	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/lenet_multi/otherboardparams/params/lenet2fc2out_bd1.txt", bufsfc2[0], F2_LOOPEXE);
 
 	printf("ok!\n");
 	ap_fixed<169,69> packet = 0;
@@ -271,6 +283,19 @@ int main() {
 				packet(63,32) = ((ap_fixed<32,16>)bufsfc1[board][i+2])(31,0);
 				packet(31,0) =((ap_fixed<32,16>)bufsfc1[board][i+3])(31,0);
 				buf1[(MBD-1)*(CONV1_PKT_SIZE+CONV2_PKT_SIZE) + board*F1_PKT_SIZE +j] = packet;
+				//buf1[board*CONV2_PKT_SIZE +j] = packet;
+			}
+	}
+	for (board = 0; board < MBD-1; board++) {
+		head = (ap_uint<16>)(board+1);
+		for (i = 0, j = 0; j < F2_PKT_SIZE; i+=4, j++) {
+				#pragma HLS PIPELINE II=1
+				packet(168,153) = head(15,0);
+				packet(127,96) = ((ap_fixed<32,16>)bufsfc2[board][i])(31,0);
+				packet(95,64) =((ap_fixed<32,16>)bufsfc2[board][i+1])(31,0);
+				packet(63,32) = ((ap_fixed<32,16>)bufsfc2[board][i+2])(31,0);
+				packet(31,0) =((ap_fixed<32,16>)bufsfc2[board][i+3])(31,0);
+				buf1[(MBD-1)*(CONV1_PKT_SIZE+CONV2_PKT_SIZE+F1_PKT_SIZE) + board*F2_PKT_SIZE +j] = packet;
 				//buf1[board*CONV2_PKT_SIZE +j] = packet;
 			}
 	}
