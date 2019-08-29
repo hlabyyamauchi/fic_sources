@@ -15,7 +15,7 @@
 #define CONV1_OUT_SIZE C1_OCH*C1_OSIZE*C1_OSIZE
 #define CONV1_BUF_SIZE (C1_OCH*C1_OSIZE*CONV1_LOOPEXE+3)//means CONV1_OUT_SIZE/CONV1_OUTLOOP*CONV1_LOOPEXE   +3 ceiling for pkt
 #define CONV1_PKT_SIZE (CONV1_BUF_SIZE/4) //send packetnum
-///////////////
+
 #define P1_OSIZE 12
 #define P1_K 2
 
@@ -54,6 +54,9 @@
 #define F2_OUT_SIZE 10
 #define F2_BUF_SIZE (F2_LOOPEXE+3)
 #define F2_PKT_SIZE (F2_BUF_SIZE/4)
+
+#define MAX_BUF_SIZE CONV1_BUF_SIZE
+#define MAX_PKT_SIZE CONV1_PKT_SIZE
 
 #define RESULTSIZE 10
 
@@ -148,7 +151,7 @@ void conv1_part(
 		float input[C1_ICH][C1_ISIZE][C1_ISIZE],
 		float weight[C1_OCH][C1_ICH][C1_K][C1_K],
 		float bias[C1_OCH],
-		float buffer[CONV1_BUF_SIZE],
+		float buffer[MAX_BUF_SIZE],
 		ap_uint<16> idd
 ) {
 #pragma HLS INLINE off
@@ -171,13 +174,12 @@ void conv1_part(
 				}
 			}
 		}
-		// if (tdatanum != i) printf("error\n");
 	return;
 }
 
 void data_trans(
 	int sendnum,
-	float senddata[], //buffer in conv1_part
+	float senddata[],
 	ap_uint<16> idd,
 	ap_fixed<169,69> tmpout[],
 	ap_fixed<169,69> output[]
@@ -203,7 +205,7 @@ void data_trans(
 void data_recv(
 	int sendnum,
 	int inputnum,
-	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	float v[MBD][MAX_BUF_SIZE],//recvdata
 	ap_uint<16> idd,
 	ap_fixed<169,69> tmpin[],
 	ap_fixed<169,69> input[]
@@ -214,7 +216,7 @@ void data_recv(
 	int ii[MBD]; //receive counter
 	for(i=0; i<sendnum*(MBD-1); i++) tmpin[i] = input[inputnum + i]; //receive data
 	for(i=0; i<MBD; i++) ii[i]=0;
-	for(i=0; i<sendnum*(MBD-1); i++) { //Future work: Adaptation for ilegular patturn?
+	for(i=0; i<sendnum*(MBD-1); i++) {
 #pragma HLS PIPELINE II=1
 		pid(15,0) = tmpin[i](168,153);
 	    tmp0(31,0) = tmpin[i](127,96);
@@ -233,12 +235,12 @@ void data_recv(
 
 void conv1_r(
 	int sendnum,
-	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	float v[MBD][MAX_BUF_SIZE],//recvdata
 	ap_fixed<169,69> input[],
 	ap_fixed<169,69> tmpin[],
 	ap_uint<16> idd,
 	float conv1_out[C1_OCH][C1_OSIZE][C1_OSIZE],
-	float buffer[CONV1_BUF_SIZE]
+	float buffer[MAX_BUF_SIZE]
 ) {
 	int board;
 	int ox, oy, n, num;
@@ -266,29 +268,23 @@ void conv1_all(
 		float weight[C1_OCH][C1_ICH][C1_K][C1_K],
 		float bias[C1_OCH],
 		float conv1_out[C1_OCH][C1_OSIZE][C1_OSIZE],
-//		float debug_buffer[CONV1_BUF_SIZE], //for simulation
 		ap_uint<16> idd,
-		float buffer[CONV1_BUF_SIZE],
-	 	float v[MBD][CONV1_BUF_SIZE],
-	 	ap_fixed<169,69> tmpout[CONV1_PKT_SIZE],
-	 	ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)],
+		float buffer[MAX_BUF_SIZE],
+	 	float v[MBD][MAX_BUF_SIZE],
+	 	ap_fixed<169,69> tmpout[MAX_PKT_SIZE],
+	 	ap_fixed<169,69> tmpin[MAX_PKT_SIZE*(MBD-1)],
 		ap_fixed<169,69> tdata[],
 		ap_fixed<169,69> rdata[]
-		//below sharable resource from main function
-	  //float buffer[],
-		//ap_fixed<169,69> tmpout[],
-		//ap_fixed<169,69> tmpin[]
 ) {
 	 int j, k;
 	 int sendnum = CONV1_PKT_SIZE;
-	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
+	 for (j = 0; j < MAX_BUF_SIZE; j++) buffer[j] = 0;
 	 for (j = 0; j < MBD; j++)
-		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
+		 for(k = 0; k < MAX_BUF_SIZE; k++) v[j][k] = 0;
 	conv1_part(input, weight, bias, buffer, idd);
 	data_trans(sendnum, buffer, idd, tmpout, tdata);
 	conv1_r(sendnum, v, rdata, tmpin, idd, conv1_out, buffer);
 	int i;
-//	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
 	return;
 }
 void conv1(
@@ -300,7 +296,6 @@ void conv1(
 #pragma HLS INLINE off
 	int ox, oy, kx, ky, n, m;
 	static int stride = 1;
-	//Calculate
 		for (ox = 0; ox < C1_OSIZE; ox++) {
 			for (oy = 0; oy < C1_OSIZE; oy++) {
 				for (n = 0; n < C1_OCH; n++) {
@@ -367,7 +362,7 @@ void conv2_part(
 		float input[C2_ICH][C2_ISIZE][C2_ISIZE],
 		float weight[C2_OCH][C2_ICH][C2_K][C2_K],
 		float bias[C2_OCH],
-		float buffer[CONV1_BUF_SIZE],
+		float buffer[MAX_BUF_SIZE],
 		ap_uint<16> idd
 ) {
 #pragma HLS INLINE off
@@ -390,24 +385,23 @@ void conv2_part(
 				}
 			}
 		}
-		// if (tdatanum != i) printf("error\n");
 	return;
 }
 
 void conv2_r(
 	int sendnum,
-	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	float v[MBD][MAX_BUF_SIZE],//recvdata
 	ap_fixed<169,69> input[],
 	ap_fixed<169,69> tmpin[],
 	ap_uint<16> idd,
 	float conv2_out[C2_OCH][C2_OSIZE][C2_OSIZE],
-	float buffer[CONV1_BUF_SIZE]
+	float buffer[MAX_BUF_SIZE]
 ) {
 	int board;
 	int ox, oy, n, num;
-	int inputnum = CONV1_PKT_SIZE;
+	int inputnum = CONV1_PKT_SIZE*(MBD-1);
 	data_recv(sendnum, inputnum,v, idd, tmpin, input); //data receive
-	//arrange results into conv1_out
+	//arrange results into conv2_out
 	for (board = 0; board < MBD; board++) {
 		num = 0;
 		for (ox = 0 ; ox < C2_OSIZE; ox++) {
@@ -429,29 +423,23 @@ void conv2_all(
 		float weight[C2_OCH][C2_ICH][C2_K][C2_K],
 		float bias[C2_OCH],
 		float conv1_out[C2_OCH][C2_OSIZE][C2_OSIZE],
-//		float debug_buffer[CONV1_BUF_SIZE], //for simulation
 		ap_uint<16> idd,
-		float buffer[CONV1_BUF_SIZE],
-	 	float v[MBD][CONV1_BUF_SIZE],
-	 	ap_fixed<169,69> tmpout[CONV1_PKT_SIZE],
-	 	ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)],
+		float buffer[MAX_BUF_SIZE],
+	 	float v[MBD][MAX_BUF_SIZE],
+	 	ap_fixed<169,69> tmpout[MAX_PKT_SIZE],
+	 	ap_fixed<169,69> tmpin[MAX_PKT_SIZE*(MBD-1)],
 		ap_fixed<169,69> tdata[],
 		ap_fixed<169,69> rdata[]
-		//below sharable resource from main function
-	  /*float buffer[],
-		ap_fixed<169,69> tmpout[],
-		ap_fixed<169,69> tmpin[]*/
 ) {
 	 int j, k;
 	 int sendnum = CONV2_PKT_SIZE;
-	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
+	 for (j = 0; j < MAX_BUF_SIZE; j++) buffer[j] = 0;
 	 for (j = 0; j < MBD; j++)
-		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
+		 for(k = 0; k < MAX_BUF_SIZE; k++) v[j][k] = 0;
 	conv2_part(input, weight, bias, buffer, idd);
 	data_trans(sendnum, buffer, idd, tmpout, tdata);
 	conv2_r(sendnum, v, rdata, tmpin, idd, conv1_out, buffer);
 	int i;
-//	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
 	return;
 }
 
@@ -528,18 +516,18 @@ void flatten(float input[C2_OCH][P2_OSIZE][P2_OSIZE], float output[F1_M]){
 
 void fc1_r(
 	int sendnum,
-	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	float v[MBD][MAX_BUF_SIZE],//recvdata
 	ap_fixed<169,69> input[],
 	ap_fixed<169,69> tmpin[],
 	ap_uint<16> idd,
 	float fc1_out[F1_N],
-	float buffer[CONV1_BUF_SIZE]
+	float buffer[MAX_BUF_SIZE]
 ) {
 	int board;
 	int ox, oy, n, num, i;
-	int inputnum = CONV1_PKT_SIZE + CONV2_PKT_SIZE;
+	int inputnum = (CONV1_PKT_SIZE + CONV2_PKT_SIZE)*(MBD-1);
 	data_recv(sendnum, inputnum, v, idd, tmpin, input); //data receive
-	//arrange results into conv1_out
+	//arrange results into fc1_out
 	for (board = 0; board < MBD; board++) {
 		num = 0;
 		for (i = 0; i < F1_N; i++) {
@@ -552,7 +540,7 @@ void fc1_r(
 	return;
 }
 
-void fc1_part(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], float buffer[CONV1_BUF_SIZE], ap_uint<16> idd
+void fc1_part(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], float buffer[MAX_BUF_SIZE], ap_uint<16> idd
 ) {
 #pragma HLS INLINE off
 	int i, j, p;
@@ -576,29 +564,23 @@ void fc1_all(
 		float weight[F1_N][F1_M],
 		float bias[F1_N],
 		float fc1_out[F1_N],
-//		float debug_buffer[CONV1_BUF_SIZE], //for simulation
 		ap_uint<16> idd,
-		float buffer[CONV1_BUF_SIZE],
-	 	float v[MBD][CONV1_BUF_SIZE],
-	 	ap_fixed<169,69> tmpout[CONV1_PKT_SIZE],
-	 	ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)],
+		float buffer[MAX_BUF_SIZE],
+	 	float v[MBD][MAX_BUF_SIZE],
+	 	ap_fixed<169,69> tmpout[MAX_PKT_SIZE],
+	 	ap_fixed<169,69> tmpin[MAX_PKT_SIZE*(MBD-1)],
 		ap_fixed<169,69> tdata[],
 		ap_fixed<169,69> rdata[]
-		//below sharable resource from main function
-	  /*float buffer[],
-		ap_fixed<169,69> tmpout[],
-		ap_fixed<169,69> tmpin[]*/
 ) {
 	 int j, k;
 	 int sendnum = F1_PKT_SIZE;
-	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
+	 for (j = 0; j < MAX_BUF_SIZE; j++) buffer[j] = 0;
 	 for (j = 0; j < MBD; j++)
-		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
+		 for(k = 0; k < MAX_BUF_SIZE; k++) v[j][k] = 0;
 	fc1_part(input, weight, bias, buffer, idd);
 	data_trans(sendnum, buffer, idd, tmpout, tdata);
 	fc1_r(sendnum, v, rdata, tmpin, idd, fc1_out, buffer);
 	int i;
-//	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
 	return;
 }
 
@@ -620,18 +602,18 @@ void fc1(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], float ou
 
 void fc2_r(
 	int sendnum,
-	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	float v[MBD][MAX_BUF_SIZE],//recvdata
 	ap_fixed<169,69> input[],
 	ap_fixed<169,69> tmpin[],
 	ap_uint<16> idd,
 	float fc2_out[F2_N],
-	float buffer[CONV1_BUF_SIZE]
+	float buffer[MAX_BUF_SIZE]
 ) {
 	int board;
 	int ox, oy, n, num, i;
 	int inputnum = (CONV1_PKT_SIZE+CONV2_PKT_SIZE+F1_PKT_SIZE)*(MBD-1);
 	data_recv(sendnum, inputnum, v, idd, tmpin, input); //data receive
-	//arrange results into conv1_out
+	//arrange results into fc2_out
 	for (board = 0; board < MBD; board++) {
 		num = 0;
 		for (i = 0; i < F1_N; i++) {
@@ -644,7 +626,7 @@ void fc2_r(
 	return;
 }
 
-void fc2_part(float input[F2_M], float weight[F2_N][F2_M], float bias[F2_N], float buffer[CONV1_BUF_SIZE], ap_uint<16> idd
+void fc2_part(float input[F2_M], float weight[F2_N][F2_M], float bias[F2_N], float buffer[MAX_BUF_SIZE], ap_uint<16> idd
 ) {
 #pragma HLS INLINE off
 	int i, j, p;
@@ -668,37 +650,23 @@ void fc2_all(
 		float weight[F2_N][F2_M],
 		float bias[F2_N],
 		float fc2_out[F2_N],
-//		float debug_buffer[CONV1_BUF_SIZE], //for simulation
 		ap_uint<16> idd,
-		float buffer[CONV1_BUF_SIZE],
-	 	float v[MBD][CONV1_BUF_SIZE],
-	 	ap_fixed<169,69> tmpout[CONV1_PKT_SIZE],
-	 	ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)],
+		float buffer[MAX_BUF_SIZE],
+	 	float v[MBD][MAX_BUF_SIZE],
+	 	ap_fixed<169,69> tmpout[MAX_PKT_SIZE],
+	 	ap_fixed<169,69> tmpin[MAX_PKT_SIZE*(MBD-1)],
 		ap_fixed<169,69> tdata[],
 		ap_fixed<169,69> rdata[]
-		//below sharable resource from main function
-	  /*float buffer[],
-		ap_fixed<169,69> tmpout[],
-		ap_fixed<169,69> tmpin[]*/
 ) {
-	 int j, k, l;
+	 int j, k;
 	 int sendnum = F2_PKT_SIZE;
-	 float sum = 0.0;
-	 float output_tmp[F2_N];
-	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
+	 for (j = 0; j < MAX_BUF_SIZE; j++) buffer[j] = 0;
 	 for (j = 0; j < MBD; j++)
-		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
+		 for(k = 0; k < MAX_BUF_SIZE; k++) v[j][k] = 0;
 	fc2_part(input, weight, bias, buffer, idd);
 	data_trans(sendnum, buffer, idd, tmpout, tdata);
-	fc2_r(sendnum, v, rdata, tmpin, idd, output_tmp, buffer);
-	for (k = 0; k < F2_N; k++) {
-		sum += expf(output_tmp[k]);
-	}
-	for (l = 0; l < F2_N; l++) {
-		fc2_out[l] = expf(output_tmp[l]) / sum;
-	}
+	fc2_r(sendnum, v, rdata, tmpin, idd, fc2_out, buffer);
 	int i;
-//	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
 	return;
 }
 
@@ -717,11 +685,17 @@ void fc2(float input[F2_M], float weight[F2_N][F2_M], float bias[F2_N], float ou
 			}
 		}
 	}
+	return;
+}
+
+void softmax(float fc2_out[F2_N], float output[F2_N]) {
+	int k, l;
+	float sum = 0.0;
 	for (k = 0; k < F2_N; k++) {
-		sum += expf(output_tmp[k]);
+		sum += expf(fc2_out[k]);
 	}
 	for (l = 0; l < F2_N; l++) {
-		output[l] = expf(output_tmp[l]) / sum;
+		output[l] = expf(fc2_out[l]) / sum;
 	}
 	return;
 }
@@ -731,17 +705,13 @@ void store_output(float input[F2_N], float output[RESULTSIZE]){
 	int i;
 	for(i = 0; i < F2_N; i++)
 		output[i] = input[i];
-	//for(i = F2_N; i < RESULTSIZE; i++)
-	//	output[i] = 0.0;
 	return;
 }
 
 void lenetall(
-		float input[C1_ICH*C1_ISIZE*C1_ISIZE], //read all
-		float output[RESULTSIZE],//change here for debug
-		//ap_fixed<169,69> input[IN_DATASIZE],
-		//ap_fixed<169,69> output[3],
-		float wb[ALL_WB_SIZE],// 20 weights
+		float input[C1_ICH*C1_ISIZE*C1_ISIZE],
+		float output[RESULTSIZE],
+		float wb[ALL_WB_SIZE],
 		ap_fixed<169,69> buf1[],
 		ap_fixed<169,69> sw1out[],
 		ap_fixed<169,69> sw2in[1],
@@ -764,44 +734,36 @@ void lenetall(
 #pragma HLS INTERFACE axis register both port=wb
 //#pragma HLS ARRAY_PARTITION variable=input cyclic factor=2 //in mushak program
 //#pragma HLS ARRAY_PARTITION variable=output cyclic factor=2
-
 	//vairables
 	ap_uint<16> idd, pid;
 	ap_fixed<169,69> sync;
 	//static float input_tmp[C1_ICH][C1_ISIZE][C1_ISIZE];
-
 	static float image[C1_ICH][C1_ISIZE][C1_ISIZE];
-
 	static float conv1_w[C1_OCH][C1_ICH][C1_K][C1_K];
 	static float conv1_b[C1_OCH];
 	static float conv1_out[C1_OCH][C1_OSIZE][C1_OSIZE];
-
 	static float pool1_out[C1_OCH][P1_OSIZE][P1_OSIZE];
-
 	static float conv2_w[C2_OCH][C2_ICH][C2_K][C2_K];
 	static float conv2_b[C2_OCH];
 	static float conv2_out[C2_OCH][C2_OSIZE][C2_OSIZE];
-
 	static float pool2_out[C2_OCH][P2_OSIZE][P2_OSIZE];
-
 	static float flat_out[F1_M];
-
 	static float fc1_w[F1_N][F1_M];
 	static float fc1_b[F1_N];
 	static float fc1_out[F1_N];
-
 	static float fc2_w[F2_N][F2_M];
 	static float fc2_b[F2_N];
 	static float fc2_out[F2_N];
+	static float softmax_out[F2_N];
+
 	//buffers
-	 float buffer[CONV1_BUF_SIZE];
-	 float v[MBD][CONV1_BUF_SIZE];
-	 ap_fixed<169,69> tmpout[CONV1_PKT_SIZE];
-	 ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)];
+	 float buffer[MAX_BUF_SIZE];
+	 float v[MBD][MAX_BUF_SIZE];
+	 ap_fixed<169,69> tmpout[MAX_PKT_SIZE];
+	 ap_fixed<169,69> tmpin[MAX_PKT_SIZE*(MBD-1)];
 
 	static int wb_flag = 0;
 		//Initialize
-
 
 	if (wb_flag == 0) {
 		load_wb(wb, conv1_w, conv1_b, conv2_w, conv2_b, fc1_w, fc1_b, fc2_w, fc2_b);
@@ -809,7 +771,6 @@ void lenetall(
 	}
 	load_input(input, image);
 	startt[0] = 1; //timer start
-	
 	idd = id;
 	if (idd==0) sw2out[0] = 1;
 	else sync= sw2in[0];
@@ -820,18 +781,13 @@ void lenetall(
 	//conv2(pool1_out, conv2_w, conv2_b, conv2_out);
 	conv2_all(pool1_out, conv2_w, conv2_b, conv2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	pool2(conv2_out, pool2_out);
-
 	flatten(pool2_out, flat_out);
-
 	//fc1(flat_out, fc1_w, fc1_b, fc1_out);
 	fc1_all(flat_out, fc1_w, fc1_b, fc1_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
-
 	//fc2(fc1_out, fc2_w, fc2_b, fc2_out);
 	fc2_all(flat_out, fc2_w, fc2_b, fc2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
-
-	store_output(fc2_out, output);
+	softmax(fc2_out, softmax_out);
+	store_output(softmax_out, output);
 	stopt[0] = 1;//timer stop
-	
-
 	return;
 }
