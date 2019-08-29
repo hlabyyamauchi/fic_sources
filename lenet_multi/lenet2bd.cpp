@@ -530,7 +530,7 @@ void fc1_r(
 	float buffer[CONV1_BUF_SIZE]
 ) {
 	int board;
-	int ox, oy, n, num;
+	int ox, oy, n, num, i;
 	int inputnum = CONV1_PKT_SIZE + CONV2_PKT_SIZE;
 	data_recv(sendnum, inputnum, v, idd, tmpin, input); //data receive
 	//arrange results into conv1_out
@@ -553,7 +553,7 @@ void fc1_part(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], flo
 	int num = 0;
 	for (i = 0; i < F1_N; i++) {
 		if ((i < idd * F1_LOOPEXE) || ((idd+1) * F1_LOOPEXE <= i)) continue;
-		output[i] = bias[i];
+		buffer[num] = bias[i];
 		for (j = 0; j < F1_M; j+=F1_P) {
 			for (p = 0; p < F1_P; p++) {
 				#pragma HLS UNROLL
