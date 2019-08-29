@@ -190,6 +190,7 @@ void data_trans(
 
 void data_recv(
 	int sendnum,
+	int inputnum,
 	float v[MBD][CONV1_BUF_SIZE],//recvdata
 	ap_uint<16> idd,
 	ap_fixed<169,69> tmpin[],
@@ -199,7 +200,7 @@ void data_recv(
 	ap_uint<16> pid;
 	ap_fixed<32,16> tmp0, tmp1, tmp2, tmp3;
 	int ii[MBD]; //receive counter
-	for(i=0; i<sendnum*(MBD-1); i++) tmpin[i] = input[i]; //receive data
+	for(i=0; i<sendnum*(MBD-1); i++) tmpin[i] = input[inputnum + i]; //receive data
 	for(i=0; i<MBD; i++) ii[i]=0;
 	for(i=0; i<sendnum*(MBD-1); i++) { //Future work: Adaptation for ilegular patturn?
 #pragma HLS PIPELINE II=1
@@ -229,7 +230,8 @@ void conv1_r(
 ) {
 	int board;
 	int ox, oy, n, num;
-	data_recv(sendnum, v, idd, tmpin, input); //data receive
+	int inputnum = 0;
+	data_recv(sendnum, inputnum, v, idd, tmpin, input); //data receive
 	//arrange results into conv1_out
 	for (board = 0; board < MBD; board++) {
 		num = 0;
@@ -391,7 +393,8 @@ void conv2_r(
 ) {
 	int board;
 	int ox, oy, n, num;
-	data_recv(sendnum, v, idd, tmpin, input); //data receive
+	int inputnum = CONV1_PKT_SIZE;
+	data_recv(sendnum, inputnum,v, idd, tmpin, input); //data receive
 	//arrange results into conv1_out
 	for (board = 0; board < MBD; board++) {
 		num = 0;
