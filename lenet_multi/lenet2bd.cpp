@@ -658,22 +658,14 @@ void fc2_all(
 		ap_fixed<169,69> tdata[],
 		ap_fixed<169,69> rdata[]
 ) {
-	 int j, k, l;
+	 int j, k;
 	 int sendnum = F2_PKT_SIZE;
-	 float sum = 0.0;
-	 float output_tmp[F2_N];
 	 for (j = 0; j < MAX_BUF_SIZE; j++) buffer[j] = 0;
 	 for (j = 0; j < MBD; j++)
 		 for(k = 0; k < MAX_BUF_SIZE; k++) v[j][k] = 0;
 	fc2_part(input, weight, bias, buffer, idd);
 	data_trans(sendnum, buffer, idd, tmpout, tdata);
-	fc2_r(sendnum, v, rdata, tmpin, idd, output_tmp, buffer);
-	for (k = 0; k < F2_N; k++) {
-		sum += expf(output_tmp[k]);
-	}
-	for (l = 0; l < F2_N; l++) {
-		fc2_out[l] = expf(output_tmp[l]) / sum;
-	}
+	fc2_r(sendnum, v, rdata, tmpin, idd, fc2_out, buffer);
 	int i;
 	return;
 }
@@ -693,11 +685,17 @@ void fc2(float input[F2_M], float weight[F2_N][F2_M], float bias[F2_N], float ou
 			}
 		}
 	}
+	return;
+}
+
+void softmax(float fc2_out[F2_N], float output[F2_N]) {
+	int k, l;
+	float sum = 0.0;
 	for (k = 0; k < F2_N; k++) {
-		sum += expf(output_tmp[k]);
+		sum += expf(fc2_out[k]);
 	}
 	for (l = 0; l < F2_N; l++) {
-		output[l] = expf(output_tmp[l]) / sum;
+		output[l] = expf(fc2_out[l]) / sum;
 	}
 	return;
 }
@@ -756,6 +754,8 @@ void lenetall(
 	static float fc2_w[F2_N][F2_M];
 	static float fc2_b[F2_N];
 	static float fc2_out[F2_N];
+	static float softmax_out[F2_N];
+
 	//buffers
 	 float buffer[MAX_BUF_SIZE];
 	 float v[MBD][MAX_BUF_SIZE];
@@ -786,7 +786,8 @@ void lenetall(
 	fc1_all(flat_out, fc1_w, fc1_b, fc1_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	//fc2(fc1_out, fc2_w, fc2_b, fc2_out);
 	fc2_all(flat_out, fc2_w, fc2_b, fc2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
-	store_output(fc2_out, output);
+	softmax(fc2_out, softmax_out);
+	store_output(softmax_out, output);
 	stopt[0] = 1;//timer stop
 	return;
 }
