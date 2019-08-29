@@ -39,6 +39,12 @@
 #define F1_M 800
 #define F1_P 10
 
+#define F1_OUTLOOP 500
+#define F1_LOOPEXE 250
+#define F1_OUT_SIZE 500
+#define F1_BUF_SIZE (F1_LOOPEXE+3)
+#define F1_PKT_SIZE (F1_BUF_SIZE/4) 
+
 #define F2_N 10
 #define F2_M 500
 #define F2_P 10
@@ -190,6 +196,7 @@ void data_trans(
 
 void data_recv(
 	int sendnum,
+	int inputnum,
 	float v[MBD][CONV1_BUF_SIZE],//recvdata
 	ap_uint<16> idd,
 	ap_fixed<169,69> tmpin[],
@@ -199,7 +206,7 @@ void data_recv(
 	ap_uint<16> pid;
 	ap_fixed<32,16> tmp0, tmp1, tmp2, tmp3;
 	int ii[MBD]; //receive counter
-	for(i=0; i<sendnum*(MBD-1); i++) tmpin[i] = input[i]; //receive data
+	for(i=0; i<sendnum*(MBD-1); i++) tmpin[i] = input[inputnum + i]; //receive data
 	for(i=0; i<MBD; i++) ii[i]=0;
 	for(i=0; i<sendnum*(MBD-1); i++) { //Future work: Adaptation for ilegular patturn?
 #pragma HLS PIPELINE II=1
@@ -229,7 +236,8 @@ void conv1_r(
 ) {
 	int board;
 	int ox, oy, n, num;
-	data_recv(sendnum, v, idd, tmpin, input); //data receive
+	int inputnum = 0;
+	data_recv(sendnum, inputnum, v, idd, tmpin, input); //data receive
 	//arrange results into conv1_out
 	for (board = 0; board < MBD; board++) {
 		num = 0;
@@ -391,7 +399,8 @@ void conv2_r(
 ) {
 	int board;
 	int ox, oy, n, num;
-	data_recv(sendnum, v, idd, tmpin, input); //data receive
+	int inputnum = CONV1_PKT_SIZE;
+	data_recv(sendnum, inputnum,v, idd, tmpin, input); //data receive
 	//arrange results into conv1_out
 	for (board = 0; board < MBD; board++) {
 		num = 0;
@@ -508,6 +517,82 @@ void flatten(float input[C2_OCH][P2_OSIZE][P2_OSIZE], float output[F1_M]){
 		 	}
 		}
 	}
+	return;
+}
+
+void fc1_r(
+	int sendnum,
+	float v[MBD][CONV1_BUF_SIZE],//recvdata
+	ap_fixed<169,69> input[],
+	ap_fixed<169,69> tmpin[],
+	ap_uint<16> idd,
+	float fc1_out[F1_N],
+	float buffer[CONV1_BUF_SIZE]
+) {
+	int board;
+	int ox, oy, n, num;
+	int inputnum = CONV1_PKT_SIZE + CONV2_PKT_SIZE;
+	data_recv(sendnum, inputnum, v, idd, tmpin, input); //data receive
+	//arrange results into conv1_out
+	for (board = 0; board < MBD; board++) {
+		num = 0;
+		for (i = 0; i < F1_N; i++) {
+			if ((i < board * F1_LOOPEXE) || ((board+1) * F1_LOOPEXE <= i)) continue;
+			if (board == idd) fc1_out[i] = buffer[num];
+			else fc1_out[i] = v[board][num];
+			num++;
+		}
+	}
+	return;
+}
+
+void fc1_part(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], float buffer[CONV1_BUF_SIZE], ap_uint<16> idd
+) {
+#pragma HLS INLINE off
+	int i, j, p;
+	int num = 0;
+	for (i = 0; i < F1_N; i++) {
+		if ((i < idd * F1_LOOPEXE) || ((idd+1) * F1_LOOPEXE <= i)) continue;
+		output[i] = bias[i];
+		for (j = 0; j < F1_M; j+=F1_P) {
+			for (p = 0; p < F1_P; p++) {
+				#pragma HLS UNROLL
+				buffer[num] += input[j+p] * weight[i][j+p];
+			}
+		}
+		if (buffer[num] < 0.0) buffer[num] = 0.0;
+		num++;
+	}
+	return;
+}
+void fc1_all(
+		float input[F1_M],
+		float weight[F1_N][F1_M],
+		float bias[F1_N],
+		float fc1_out[F1_N],
+//		float debug_buffer[CONV1_BUF_SIZE], //for simulation
+		ap_uint<16> idd,
+		float buffer[CONV1_BUF_SIZE],
+	 	float v[MBD][CONV1_BUF_SIZE],
+	 	ap_fixed<169,69> tmpout[CONV1_PKT_SIZE],
+	 	ap_fixed<169,69> tmpin[CONV1_PKT_SIZE*(MBD-1)],
+		ap_fixed<169,69> tdata[],
+		ap_fixed<169,69> rdata[]
+		//below sharable resource from main function
+	  /*float buffer[],
+		ap_fixed<169,69> tmpout[],
+		ap_fixed<169,69> tmpin[]*/
+) {
+	 int j, k;
+	 int sendnum = F1_PKT_SIZE;
+	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
+	 for (j = 0; j < MBD; j++)
+		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
+	fc1_part(input, weight, bias, buffer, idd);
+	data_trans(sendnum, buffer, idd, tmpout, tdata);
+	fc1_r(sendnum, v, rdata, tmpin, idd, fc1_out, buffer);
+	int i;
+//	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
 	return;
 }
 
@@ -648,7 +733,8 @@ void lenetall(
 
 	flatten(pool2_out, flat_out);
 
-	fc1(flat_out, fc1_w, fc1_b, fc1_out);
+	//fc1(flat_out, fc1_w, fc1_b, fc1_out);
+	fc1_all(flat_out, fc1_w, fc1_b, fc1_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 
 	fc2(fc1_out, fc2_w, fc2_b, fc2_out);
 
