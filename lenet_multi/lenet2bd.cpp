@@ -52,8 +52,8 @@
 #define F2_OUTLOOP 10
 #define F2_LOOPEXE 5
 #define F2_OUT_SIZE 10
-#define F2_BUF_SIZE (F1_LOOPEXE+3)
-#define F2_PKT_SIZE (F1_BUF_SIZE/4) 
+#define F2_BUF_SIZE (F2_LOOPEXE+3)
+#define F2_PKT_SIZE (F2_BUF_SIZE/4)
 
 #define RESULTSIZE 10
 
