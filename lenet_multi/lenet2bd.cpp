@@ -681,14 +681,22 @@ void fc2_all(
 		ap_fixed<169,69> tmpout[],
 		ap_fixed<169,69> tmpin[]*/
 ) {
-	 int j, k;
+	 int j, k, l;
 	 int sendnum = F2_PKT_SIZE;
+	 float sum = 0.0;
+	 float output_tmp[F2_N];
 	 for (j = 0; j < CONV1_BUF_SIZE; j++) buffer[j] = 0;
 	 for (j = 0; j < MBD; j++)
 		 for(k = 0; k < CONV1_BUF_SIZE; k++) v[j][k] = 0;
 	fc2_part(input, weight, bias, buffer, idd);
 	data_trans(sendnum, buffer, idd, tmpout, tdata);
-	fc2_r(sendnum, v, rdata, tmpin, idd, fc2_out, buffer);
+	fc2_r(sendnum, v, rdata, tmpin, idd, output_tmp, buffer);
+	for (k = 0; k < F2_N; k++) {
+		sum += expf(output_tmp[k]);
+	}
+	for (l = 0; l < F2_N; l++) {
+		fc2_out[l] = expf(output_tmp[l]) / sum;
+	}
 	int i;
 //	for (i = 0; i < CONV1_BUF_SIZE; i++) debug_buffer[i] = buffer[i]; //debug
 	return;

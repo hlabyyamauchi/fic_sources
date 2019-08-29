@@ -210,7 +210,7 @@ int main() {
 		if ((bufs[i] = (float *)malloc(sizeof(float)*CONV1_BUF_SIZE)) == NULL ||
 				(bufsconv2[i] = (float *)malloc(sizeof(float)*CONV2_BUF_SIZE))== NULL ||
 				(bufsfc1[i] = (float *)malloc(sizeof(float)*F1_BUF_SIZE))== NULL ||
-				(bufsfc2[i] = (float *)malloc(sizeof(float)*F1_BUF_SIZE))== NULL ||
+				(bufsfc2[i] = (float *)malloc(sizeof(float)*F2_BUF_SIZE))== NULL ||
 				0) {
 			printf("MemError\n");
 			exit(1);
