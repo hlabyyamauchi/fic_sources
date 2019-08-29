@@ -44,6 +44,8 @@
 #define C2_P 10
 #define CONV2_LOOPEXE 4
 
+#define F1_LOOPEXE 250
+#define F2_LOOPEXE 5
 
 void outputconv1(float *conv1){
 	int i, j, k, l, bid;
@@ -81,6 +83,36 @@ void outputconv2(float *conv2){
 	write_params("./params/lenet2conv2out_bd1.txt", tmp[1], C2_OCH*C2_OSIZE*CONV2_LOOPEXE);	
 	return;
 }
+void outputfc1(float *fc1) {
+	float tmp[MBD][F1_LOOPEXE];
+	int i, bid, num;
+	for (bid = 0; bid < MBD; bid++) {
+		num = 0; 
+		for (i = bid*F1_LOOPEXE; i < (bid+1)*F1_LOOPEXE; i++) {
+			tmp[bid][num] = *(fc1+i);
+			num++;
+		}
+	}
+	write_params("./params/lenet2fc1out_bd0.txt", tmp[0], F1_LOOPEXE);	
+	write_params("./params/lenet2fc1out_bd1.txt", tmp[1], F1_LOOPEXE);	
+	return;
+}
+void outputfc2(float *fc2) {
+	float tmp[MBD][F2_LOOPEXE];
+	int i, bid, num;
+	for (bid = 0; bid < MBD; bid++) {
+		num = 0; 
+		for (i = bid*F2_LOOPEXE; i < (bid+1)*F2_LOOPEXE; i++) {
+			tmp[bid][num] = *(fc2+i);
+			num++;
+		}
+	}
+	write_params("./params/lenet2fc2out_bd0.txt", tmp[0], F2_LOOPEXE);	
+	write_params("./params/lenet2fc2out_bd1.txt", tmp[1], F2_LOOPEXE);	
+	return;
+}
+
+
 void main() {
 	int i, j, k, l;
 
@@ -196,10 +228,12 @@ void main() {
   
 	maxpooling(conv2_out, 8, 50, pool2_out, 4, 2, 2);//POOL2
 
-    classifier(pool2_out, 800, fc1_out, 500, fc1_w, fc1_b);//FC1
+    	classifier(pool2_out, 800, fc1_out, 500, fc1_w, fc1_b);//FC1
+	outputfc1(fc1_out);
 	relu(fc1_out, 1, 500);
 
 	classifier(fc1_out, 500, fc2_out, 10, fc2_w, fc2_b);//FC2
+	outputfc2(fc2_out);
 	softmax(fc2_out, 10);
 
 	print_all_params(fc2_out, 10);//result
