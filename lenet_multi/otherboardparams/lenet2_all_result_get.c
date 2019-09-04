@@ -229,8 +229,8 @@ void main() {
 	maxpooling(conv2_out, 8, 50, pool2_out, 4, 2, 2);//POOL2
 
     	classifier(pool2_out, 800, fc1_out, 500, fc1_w, fc1_b);//FC1
-	outputfc1(fc1_out);
 	relu(fc1_out, 1, 500);
+	outputfc1(fc1_out);
 
 	classifier(fc1_out, 500, fc2_out, 10, fc2_w, fc2_b);//FC2
 	outputfc2(fc2_out);
