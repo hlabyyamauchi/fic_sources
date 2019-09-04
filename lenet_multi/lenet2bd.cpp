@@ -554,7 +554,7 @@ void fc1_part(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], flo
 				buffer[num] += input[j+p] * weight[i][j+p];
 			}
 		}
-		if (buffer[num] < 0.0) buffer[num] = 0.0;
+		if (buffer[num] < 0.0) buffer[num] = 0.0; //ReLu function
 		num++;
 	}
 	return;
@@ -595,7 +595,7 @@ void fc1(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], float ou
 				output[i] += input[j+p] * weight[i][j+p];
 			}
 		}
-		if (output[i] < 0.0) output[i] = 0.0;
+		if (output[i] < 0.0) output[i] = 0.0; //ReLu function
 	}
 	return;
 }
@@ -640,7 +640,7 @@ void fc2_part(float input[F2_M], float weight[F2_N][F2_M], float bias[F2_N], flo
 				buffer[num] += input[j+p] * weight[i][j+p];
 			}
 		}
-		if (buffer[num] < 0.0) buffer[num] = 0.0;
+		//if (buffer[num] < 0.0) buffer[num] = 0.0; //No ReLu function
 		num++;
 	}
 	return;
@@ -786,7 +786,7 @@ void lenetall(
 	//fc1(flat_out, fc1_w, fc1_b, fc1_out);
 	fc1_all(flat_out, fc1_w, fc1_b, fc1_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	//fc2(fc1_out, fc2_w, fc2_b, fc2_out);
-	fc2_all(flat_out, fc2_w, fc2_b, fc2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
+	fc2_all(fc1_out, fc2_w, fc2_b, fc2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	softmax(fc2_out, softmax_out);
 	store_output(softmax_out, output);
 	stopt[0] = 1;//timer stop
