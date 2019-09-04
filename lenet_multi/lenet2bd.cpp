@@ -85,13 +85,14 @@ void load_input(
 }
 
 void load_wb(
+		ap_uint<16> idd,
 		float input[ALL_WB_SIZE],
 		float conv1_w[C1_OCH][C1_ICH][C1_K][C1_K],
 		float conv1_b[C1_OCH],
 		float conv2_w[C2_OCH][C2_ICH][C2_K][C2_K],
 		float conv2_b[C2_OCH],
-		float fc1_w[F1_N][F1_M],
-		float fc1_b[F1_N],
+		float fc1_w[F1_LOOPEXE][F1_M],
+		float fc1_b[F1_LOOPEXE],
 		float fc2_w[F2_N][F2_M],
 		float fc2_b[F2_N]
 		){
@@ -130,11 +131,21 @@ void load_wb(
 
 	//FC1_WB
 	offset = 520 + 25050;
-	for(i = 0; i < F1_N; i++)
-		for (j = 0; j < F1_M; j++)
-			fc1_w[i][j] = input[offset + i*F1_M + j];
-	for(i = 0; i < F1_N; i++)
+	for(i = 0; i < F1_LOOPEXE; i++)
+		for (j = 0; j < F1_M; j++) fc1_w[i][j] = 0.0;
+
+	for(i = 0, k = 0; i < F1_N; i++) {
+		if ((i < idd * F1_LOOPEXE) || ((idd+1) * F1_LOOPEXE <= i)) continue;
+		for (j = 0; j < F1_M; j++) {
+			fc1_w[k][j] = input[offset + i*F1_M + j];
+		}
+		k++;
+	}
+	for(i = 0, k = 0; i < F1_N; i++) {
+		if ((i < idd * F1_LOOPEXE) || ((idd+1) * F1_LOOPEXE <= i)) continue;
 		fc1_b[i] = input[offset + F1_N*F1_M + i];
+		k++;
+	}
 
 	//FC1_WB
 	offset = 520 + 25050 + 400500;
@@ -540,13 +551,12 @@ void fc1_r(
 	return;
 }
 
-void fc1_part(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], float buffer[MAX_BUF_SIZE], ap_uint<16> idd
+void fc1_part(float input[F1_M], float weight[F1_LOOPEXE][F1_M], float bias[F1_LOOPEXE], float buffer[MAX_BUF_SIZE], ap_uint<16> idd
 ) {
 #pragma HLS INLINE off
 	int i, j, p;
 	int num = 0;
-	for (i = 0; i < F1_N; i++) {
-		if ((i < idd * F1_LOOPEXE) || ((idd+1) * F1_LOOPEXE <= i)) continue;
+	for (i = 0; i < F1_LOOPEXE; i++) {
 		buffer[num] = bias[i];
 		for (j = 0; j < F1_M; j+=F1_P) {
 			for (p = 0; p < F1_P; p++) {
@@ -561,8 +571,8 @@ void fc1_part(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], flo
 }
 void fc1_all(
 		float input[F1_M],
-		float weight[F1_N][F1_M],
-		float bias[F1_N],
+		float weight[F1_LOOPEXE][F1_M],
+		float bias[F1_LOOPEXE],
 		float fc1_out[F1_N],
 		ap_uint<16> idd,
 		float buffer[MAX_BUF_SIZE],
@@ -748,8 +758,8 @@ void lenetall(
 	static float conv2_out[C2_OCH][C2_OSIZE][C2_OSIZE];
 	static float pool2_out[C2_OCH][P2_OSIZE][P2_OSIZE];
 	static float flat_out[F1_M];
-	static float fc1_w[F1_N][F1_M];
-	static float fc1_b[F1_N];
+	static float fc1_w[F1_LOOPEXE][F1_M];
+	static float fc1_b[F1_LOOPEXE];
 	static float fc1_out[F1_N];
 	static float fc2_w[F2_N][F2_M];
 	static float fc2_b[F2_N];
@@ -764,14 +774,13 @@ void lenetall(
 
 	static int wb_flag = 0;
 		//Initialize
-
+	idd = (ap_uint<16>)id & 1;
 	if (wb_flag == 0) {
-		load_wb(wb, conv1_w, conv1_b, conv2_w, conv2_b, fc1_w, fc1_b, fc2_w, fc2_b);
+		load_wb(idd, wb, conv1_w, conv1_b, conv2_w, conv2_b, fc1_w, fc1_b, fc2_w, fc2_b);
 		wb_flag = 1;
 	}
 	load_input(input, image);
 	startt[0] = 1; //timer start
-	idd = id;
 	if (idd==0) sw2out[0] = 1;
 	else sync= sw2in[0];
 	//conv1(image, conv1_w, conv1_b, conv1_out);
