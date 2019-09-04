@@ -772,6 +772,7 @@ void lenetall(
 	load_input(input, image);
 	startt[0] = 1; //timer start
 	idd = id;
+	idd &= 1;
 	if (idd==0) sw2out[0] = 1;
 	else sync= sw2in[0];
 	//conv1(image, conv1_w, conv1_b, conv1_out);
