@@ -205,7 +205,7 @@ void data_trans(
 void data_recv(
 	int sendnum,
 	int inputnum,
-	float v[MBD][],//recvdata
+	float v[MBD][MAX_BUF_SIZE],//recvdata
 	ap_uint<16> idd,
 	ap_fixed<169,69> tmpin[],
 	ap_fixed<169,69> input[]
@@ -240,7 +240,7 @@ void conv1_r(
 	ap_fixed<169,69> tmpin[],
 	ap_uint<16> idd,
 	float conv1_out[C1_OCH][C1_OSIZE][C1_OSIZE],
-	float buffer[CONV1_BUF_SIZE]
+	float buffer[MAX_BUF_SIZE]
 ) {
 	int board;
 	int ox, oy, n, num;
@@ -391,7 +391,7 @@ void conv2_part(
 
 void conv2_r(
 	int sendnum,
-	float v[MBD][CONV2_BUF_SIZE],//recvdata
+	float v[MBD][MAX_BUF_SIZE],//recvdata
 	ap_fixed<169,69> input[],
 	ap_fixed<169,69> tmpin[],
 	ap_uint<16> idd,
@@ -401,7 +401,7 @@ void conv2_r(
 	int board;
 	int ox, oy, n, num;
 	int inputnum = CONV1_PKT_SIZE*(MBD-1);
-	data_recv(sendnum, inputnum,v, idd, tmpin, input); //data receive
+	data_recv(sendnum, inputnum, v, idd, tmpin, input); //data receive
 	//arrange results into conv2_out
 	for (board = 0; board < MBD; board++) {
 		num = 0;
@@ -429,8 +429,8 @@ void conv2_all(
 		ap_fixed<169,69> rdata[]
 ) {
 	 int j, k;
-	 float buffer[CONV2_BUF_SIZE];
-	 float v[MBD][CONV2_BUF_SIZE];
+	 float buffer[MAX_BUF_SIZE];
+	 float v[MBD][MAX_BUF_SIZE];
 	 ap_fixed<169,69> tmpout[CONV2_PKT_SIZE];
 	 ap_fixed<169,69> tmpin[CONV2_PKT_SIZE*(MBD-1)];
 	 int sendnum = CONV2_PKT_SIZE;
@@ -517,7 +517,7 @@ void flatten(float input[C2_OCH][P2_OSIZE][P2_OSIZE], float output[F1_M]){
 
 void fc1_r(
 	int sendnum,
-	float v[MBD][F1_BUF_SIZE],//recvdata
+	float v[MBD][MAX_BUF_SIZE],//recvdata
 	ap_fixed<169,69> input[],
 	ap_fixed<169,69> tmpin[],
 	ap_uint<16> idd,
@@ -570,8 +570,8 @@ void fc1_all(
 		ap_fixed<169,69> rdata[]
 ) {
 	 int j, k;
- 	 float buffer[F1_BUF_SIZE];
-	 float v[MBD][F1_BUF_SIZE];
+ 	 float buffer[MAX_BUF_SIZE];
+	 float v[MBD][MAX_BUF_SIZE];
 	 ap_fixed<169,69> tmpout[F1_PKT_SIZE];
 	 ap_fixed<169,69> tmpin[F1_PKT_SIZE*(MBD-1)];
 	 int sendnum = F1_PKT_SIZE;
@@ -603,7 +603,7 @@ void fc1(float input[F1_M], float weight[F1_N][F1_M], float bias[F1_N], float ou
 
 void fc2_r(
 	int sendnum,
-	float v[MBD][F2_BUF_SIZE],//recvdata
+	float v[MBD][MAX_BUF_SIZE],//recvdata
 	ap_fixed<169,69> input[],
 	ap_fixed<169,69> tmpin[],
 	ap_uint<16> idd,
@@ -656,8 +656,8 @@ void fc2_all(
 		ap_fixed<169,69> rdata[]
 ) {
 	 int j, k;
-  	 float buffer[F2_BUF_SIZE];
-	 float v[MBD][F2_BUF_SIZE];
+  	 float buffer[MAX_BUF_SIZE];
+	 float v[MBD][MAX_BUF_SIZE];
 	 ap_fixed<169,69> tmpout[F2_PKT_SIZE];
 	 ap_fixed<169,69> tmpin[F2_PKT_SIZE*(MBD-1)];
 	 int sendnum = F2_PKT_SIZE;
@@ -721,6 +721,7 @@ void lenetall(
 		ap_uint<4> startt[1],
 	    ap_uint<4> stopt[1]
 	){
+#pragma HLS dataflow
 //#pragma for flow
 #pragma HLS INTERFACE axis port=startt
 #pragma HLS INTERFACE axis port=stopt
@@ -767,7 +768,7 @@ void lenetall(
 	load_input(input, image);
 	startt[0] = 1; //timer start
 	idd = id;
-	idd &= 1;
+	idd &= (ap_uint<16>)1;
 	c1id = idd; c2id=idd; f1id=idd; f2id=idd;
 	if (idd==0) sw2out[0] = 1;
 	else sync= sw2in[0];
