@@ -718,6 +718,11 @@ void store_output(float input[F2_N], float output[RESULTSIZE]){
 	return;
 }
 
+void timer_out(float timer, float data){
+#pragma HLS INTERFACE axis port=timer
+	timer= (float)data;
+	return;
+}
 void lenetall(
 		float input[C1_ICH*C1_ISIZE*C1_ISIZE],
 		float output[RESULTSIZE],
@@ -727,8 +732,8 @@ void lenetall(
 		ap_fixed<169,69> sw2in[1],
 		ap_fixed<169,69> sw2out[1],
 		char id, // 8bit
-		ap_uint<4> startt[1],
-	    ap_uint<4> stopt[1]
+		float startt[1],
+	    float stopt[1]
 	){
 //#pragma for flow
 #pragma HLS INTERFACE axis port=startt
@@ -780,7 +785,7 @@ void lenetall(
 		wb_flag = 1;
 	}
 	load_input(input, image);
-	startt[0] = 1; //timer start
+	timer_out(startt[0], image[0][0][0]);//timer start
 	if (idd==0) sw2out[0] = 1;
 	else sync= sw2in[0];
 	//conv1(image, conv1_w, conv1_b, conv1_out);
@@ -796,7 +801,7 @@ void lenetall(
 	//fc2(fc1_out, fc2_w, fc2_b, fc2_out);
 	fc2_all(fc1_out, fc2_w, fc2_b, fc2_out, idd, buffer, v, tmpout, tmpin, sw1out, buf1);
 	softmax(fc2_out, softmax_out);
+	timer_out(stopt[0],fc2_out[9]);
 	store_output(softmax_out, output);
-	stopt[0] = 1;//timer stop
 	return;
 }

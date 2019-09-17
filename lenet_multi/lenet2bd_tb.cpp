@@ -134,8 +134,8 @@ void lenetall(
 		ap_fixed<169,69> sw2in[1],
 		ap_fixed<169,69> sw2out[1],
 		char id, // 8bit
-		ap_uint<4> startt[1],
-	    ap_uint<4> stopt[1]
+		float startt[1],
+	    float stopt[1]
 	);
 //////////
 void my_tanh(float *input, int isize, int ichan) {
@@ -233,8 +233,8 @@ int main() {
 	ap_fixed<169,69> sw2in[1];
 	ap_fixed<169,69> sw2out[1];
 	char id;
-	ap_uint<4> startt[1];
-    ap_uint<4> stopt[1];
+	float startt[1];
+	float stopt[1];
 
 	printf("Read other boards params ...\n\n");fflush(stdout);
 	read_params("/home/asap2/yyamauchi/lenettest/fic_sources/lenet_multi/otherboardparams/params/lenet2conv1out_bd1.txt", bufs[0], C1_OCH*C1_OSIZE*CONV1_LOOPEXE);
