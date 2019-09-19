@@ -134,17 +134,23 @@ void load_wb(
 	for(i = 0; i < F1_LOOPEXE; i++)
 		for (j = 0; j < F1_M; j++) fc1_w[i][j] = 0.0;
 
-	for(i = 0, k = 0; i < F1_N; i++) {
-		if ((i < idd * F1_LOOPEXE) || ((idd+1) * F1_LOOPEXE <= i)) continue;
+	for(i = 0; i < F1_N; i++) {
 		for (j = 0; j < F1_M; j++) {
-			fc1_w[k][j] = input[offset + i*F1_M + j];
+			float tmp;
+			if ((i < idd * F1_LOOPEXE) || ((idd+1) * F1_LOOPEXE <= i)) {
+				tmp = input[offset + i*F1_M + j];
+			} else {
+				fc1_w[i][j] = input[offset + i*F1_M + j];
+			}
 		}
-		k++;
 	}
-	for(i = 0, k = 0; i < F1_N; i++) {
-		if ((i < idd * F1_LOOPEXE) || ((idd+1) * F1_LOOPEXE <= i)) continue;
-		fc1_b[i] = input[offset + F1_N*F1_M + i];
-		k++;
+	for(i = 0; i < F1_N; i++) {
+		float tmp;
+		if ((i < idd * F1_LOOPEXE) || ((idd+1) * F1_LOOPEXE <= i)) {
+			tmp = input[offset + F1_N*F1_M + i];
+		} else {
+			fc1_b[i] = input[offset + F1_N*F1_M + i];
+		}
 	}
 
 	//FC1_WB
